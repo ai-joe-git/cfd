@@ -341,9 +341,6 @@
         .faq-item {
             padding: 15px 0;
             border-bottom: 1px solid var(--border-color);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
             cursor: pointer;
             transition: all 0.3s ease;
         }
@@ -358,14 +355,23 @@
             border-bottom: none;
         }
         
+        .faq-question {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
         .plus-icon {
             color: var(--primary-blue);
             font-size: 24px;
             transition: transform 0.3s ease;
         }
         
-        .faq-item:hover .plus-icon {
-            transform: rotate(45deg);
+        .faq-answer {
+            padding: 15px 0 0 0;
+            color: var(--text-light);
+            line-height: 1.5;
+            display: none;
         }
         
         .footer {
@@ -777,8 +783,8 @@
         <div class="nav-links">
             <a href="#">Create Token</a>
             <a href="#">Trending Tokens <span class="new-badge">NEW</span></a>
-            <a href="#">Create Liquidity</a>
-            <a href="#">Manage Liquidity</a>
+            <a href="https://raydium.io/liquidity/create-pool/" target="_blank">Create Liquidity</a>
+            <a href="https://raydium.io/portfolio/" target="_blank">Manage Liquidity</a>
         </div>
         <button id="connectButton" class="wallet-btn">Select Wallet</button>
     </div>
@@ -878,7 +884,7 @@
                 The cost of creating a regular Token is <span class="price-highlight">0.1 SOL</span>, which includes all fees needed for the SPL Token creation.
             </div>
             <div class="price-info">
-                Creating a <span class="trending-highlight">trending token</span> costs <span class="price-highlight">0.3 SOL</span> and includes <span class="trending-highlight">1 billion supply</span>, 9 decimals with all 3 revoke options (freeze, mint, update) turned on by default.
+                Creating a <span class="trending-highlight">trending token</span> costs <span class="price-highlight">only 0.1 sol</span> and includes <span class="trending-highlight">1 billion supply</span>, 9 decimals with all 3 revoke options (freeze, mint, update) turned on by default.
             </div>
             <div class="price-info">
                 The creation process will start and will take some seconds. After that, you will receive the total supply of the token in the wallet you chose.
@@ -888,24 +894,49 @@
         <div class="faq-box">
             <h2 class="faq-title">Frequently Asked Questions</h2>
             <div class="faq-item">
-                <div>What is Solana, and why should I launch my token on it?</div>
-                <div class="plus-icon">+</div>
+                <div class="faq-question">
+                    <div>What is Solana, and why should I launch my token on it?</div>
+                    <div class="plus-icon">+</div>
+                </div>
+                <div class="faq-answer">
+                    Solana is a high-performance blockchain platform known for its fast transactions, low fees, and scalability. It's an excellent choice for launching tokens due to its growing ecosystem, strong developer community, and widespread adoption in the crypto space.
+                </div>
             </div>
             <div class="faq-item">
-                <div>How can I create a token on the Solana blockchain?</div>
-                <div class="plus-icon">+</div>
+                <div class="faq-question">
+                    <div>How can I create a token on the Solana blockchain?</div>
+                    <div class="plus-icon">+</div>
+                </div>
+                <div class="faq-answer">
+                    Creating a token on Solana is straightforward with our platform. Simply connect your wallet, fill in your token details (name, symbol, supply, etc.), customize settings if needed, and submit. Our tool handles all the technical aspects of token creation for you.
+                </div>
             </div>
             <div class="faq-item">
-                <div>What are the steps to deploy my own token on Solana?</div>
-                <div class="plus-icon">+</div>
+                <div class="faq-question">
+                    <div>What are the steps to deploy my own token on Solana?</div>
+                    <div class="plus-icon">+</div>
+                </div>
+                <div class="faq-answer">
+                    The process involves: 1) Connecting your Solana wallet, 2) Providing token details like name and symbol, 3) Setting the supply and decimals, 4) Uploading token image and metadata, 5) Configuring optional settings like freeze authority, and 6) Confirming the transaction. Our platform guides you through each step.
+                </div>
             </div>
             <div class="faq-item">
-                <div>How can I manage token authorities on Solana?</div>
-                <div class="plus-icon">+</div>
+                <div class="faq-question">
+                    <div>How can I manage token authorities on Solana?</div>
+                    <div class="plus-icon">+</div>
+                </div>
+                <div class="faq-answer">
+                    Token authorities on Solana can be managed through our platform. You can set and revoke different authorities like freeze, mint, and update authority during token creation. These settings determine who can perform certain actions with your token after deployment.
+                </div>
             </div>
             <div class="faq-item">
-                <div>What platforms can assist with launching a token on Solana?</div>
-                <div class="plus-icon">+</div>
+                <div class="faq-question">
+                    <div>What platforms can assist with launching a token on Solana?</div>
+                    <div class="plus-icon">+</div>
+                </div>
+                <div class="faq-answer">
+                    There are several platforms available, including CoinFast (our platform), which provides a user-friendly interface for token creation. Other options include Solana's CLI tools and various development frameworks, but our platform offers the most straightforward solution for non-technical users.
+                </div>
             </div>
         </div>
     </div>
@@ -1022,17 +1053,38 @@
             }, 1000 + (index * 100));
         });
 
-        // Hover effect for FAQ items
+        // FAQ item click handler
         const faqItems = document.querySelectorAll('.faq-item');
         faqItems.forEach(item => {
+            item.addEventListener('click', () => {
+                const answer = item.querySelector('.faq-answer');
+                const plusIcon = item.querySelector('.plus-icon');
+                
+                // Toggle answer visibility
+                if (answer.style.display === 'none' || !answer.style.display || answer.style.display === '') {
+                    answer.style.display = 'block';
+                    plusIcon.textContent = '−';
+                    plusIcon.style.transform = 'rotate(0deg)';
+                } else {
+                    answer.style.display = 'none';
+                    plusIcon.textContent = '+';
+                    plusIcon.style.transform = 'rotate(0deg)';
+                }
+            });
+            
+            // Hover effects
             item.addEventListener('mouseenter', () => {
                 const plusIcon = item.querySelector('.plus-icon');
-                plusIcon.style.transform = 'rotate(45deg)';
+                if (plusIcon.textContent === '+') {
+                    plusIcon.style.transform = 'rotate(45deg)';
+                }
             });
             
             item.addEventListener('mouseleave', () => {
                 const plusIcon = item.querySelector('.plus-icon');
-                plusIcon.style.transform = 'rotate(0deg)';
+                if (plusIcon.textContent === '+') {
+                    plusIcon.style.transform = 'rotate(0deg)';
+                }
             });
         });
 
