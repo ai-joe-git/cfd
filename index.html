@@ -794,7 +794,7 @@
         <p class="subtitle">Launch your own token on Solana in seconds. No coding required.</p>
         
         <div class="connect-box">
-            <h3>Please connect your wallet to continue</h3>
+            <h3 id="connectionStatus">Please connect your wallet to continue</h3>
             <button id="connectButtonInner" class="wallet-btn" style="margin-top: 20px;">Select Wallet</button>
             <div id="result"></div>
             
@@ -996,6 +996,7 @@
         // DOM elements
         const connectButton = document.getElementById('connectButton');
         const connectButtonInner = document.getElementById('connectButtonInner');
+        const connectionStatus = document.getElementById('connectionStatus');
         const resultDiv = document.getElementById('result');
         const walletModal = document.getElementById('wallet-adapter-modal');
         const walletModalClose = document.getElementById('wallet-adapter-modal-close');
@@ -1202,17 +1203,21 @@
                 }
                 
                 const publicKey = response.publicKey;
+                const publicKeyString = publicKey.toString();
                 
-                // Show success animation
-                connectButton.innerHTML = 'Connected ✓';
+                // Show success animation and update wallet address display
+                // Update the top button to show a shortened version of the wallet address
+                connectButton.innerHTML = 'Connected: ' + publicKeyString.slice(0, 4) + '...' + publicKeyString.slice(-4);
                 connectButtonInner.innerHTML = 'Connected ✓';
+                
+                // Update the connection status message to show the full wallet address
+                connectionStatus.textContent = 'Connected to: ' + publicKeyString;
+                
+                // Style updates
                 connectButton.style.backgroundColor = '#4caf50';
                 connectButtonInner.style.backgroundColor = '#4caf50';
                 
-                // Store the publicKey string safely
-                const publicKeyString = publicKey.toString();
-                
-                // Set the active wallet for future use
+                // Store the wallet info for future use
                 window.activeWallet = wallet;
                 window.userPublicKey = publicKey;
 
