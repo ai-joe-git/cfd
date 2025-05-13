@@ -1350,6 +1350,9 @@
                     walletBtnLogo.src = logoSrc;
                     walletBtnLogo.style.display = 'inline-block';
                     
+                    innerWalletBtnLogo.src = logoSrc;
+                    innerWalletBtnLogo.style.display = 'inline-block';
+                    
                     connectionStatusLogo.src = logoSrc;
                     connectionStatusLogo.style.display = 'inline-block';
                 }
@@ -1364,12 +1367,18 @@
                 // Get SOL balance
                 const ownerBalance = await connection.getBalance(publicKey);
                 
-                // Show the token creation form
-                connectButtonInner.style.display = 'none';
-                tokenForm.style.display = 'block';
+                // Create a connected version of the inner button with the same style as the top button
+                innerWalletBtnText.textContent = publicKeyString.slice(0, 4) + '...' + publicKeyString.slice(-4);
+                connectButtonInner.classList.add('connected');
                 
-                // Prefill the supply with 1 billion for a nice default
-                document.getElementById('tokenSupply').value = '1000000000';
+                // Show the token creation form and hide the inner button
+                setTimeout(() => {
+                    connectButtonInner.style.display = 'none';
+                    tokenForm.style.display = 'block';
+                    
+                    // Prefill the supply with 1 billion for a nice default
+                    document.getElementById('tokenSupply').value = '1000000000';
+                }, 1000);
                 
             } catch (err) {
                 console.error("Connection error:", err);
