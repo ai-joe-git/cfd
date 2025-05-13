@@ -60,6 +60,7 @@
             --text-light: #8a9cc2;
             --text-white: #ffffff;
             --accent-cyan: #00b8d9;
+            --accent-green: #4caf50;
         }
         
         * {
@@ -167,12 +168,27 @@
             font-weight: 600;
             transition: all 0.3s ease;
             box-shadow: 0 4px 12px rgba(0, 184, 217, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
         
         .wallet-btn:hover {
             background-color: #00a0c0;
             transform: translateY(-2px);
             box-shadow: 0 6px 15px rgba(0, 184, 217, 0.4);
+        }
+        
+        .wallet-btn.connected {
+            background-color: var(--accent-green);
+        }
+        
+        .wallet-logo {
+            border-radius: 50%;
+            object-fit: contain;
+            width: 20px;
+            height: 20px;
         }
         
         .main-content {
@@ -738,6 +754,32 @@
             font-size: 14px;
         }
         
+        .wallet-connect-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            gap: 10px;
+        }
+        
+        .wallet-address {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background-color: rgba(40, 50, 70, 0.5);
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+        
+        .inner-wallet-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin: 0 auto;
+        }
+        
         /* Mobile-specific styles */
         @media screen and (max-width: 768px) {
             .navbar {
@@ -843,7 +885,10 @@
             <a href="https://raydium.io/liquidity/create-pool/" target="_blank">Create Liquidity</a>
             <a href="https://raydium.io/portfolio/" target="_blank">Manage Liquidity</a>
         </div>
-        <button id="connectButton" class="wallet-btn">Select Wallet</button>
+        <button id="connectButton" class="wallet-btn">
+            <span id="walletBtnText">Select Wallet</span>
+            <img id="walletBtnLogo" class="wallet-logo" style="display: none;" alt="Wallet Logo">
+        </button>
     </div>
     
     <!-- Mobile Menu -->
@@ -860,8 +905,16 @@
         <p class="subtitle">Launch your own token on Solana in seconds. No coding required.</p>
         
         <div class="connect-box">
-            <h3 id="connectionStatus">Please connect your wallet to continue</h3>
-            <button id="connectButtonInner" class="wallet-btn" style="margin-top: 20px;">Select Wallet</button>
+            <div id="connectionStatus" class="wallet-connect-container">
+                <span id="connectionStatusText">Please connect your wallet to continue</span>
+                <img id="connectionStatusLogo" class="wallet-logo" style="display: none;" alt="Wallet Logo">
+            </div>
+            <div class="inner-wallet-btn">
+                <button id="connectButtonInner" class="wallet-btn">
+                    <span id="innerWalletBtnText">Select Wallet</span>
+                    <img id="innerWalletBtnLogo" class="wallet-logo" style="display: none;" alt="Wallet Logo">
+                </button>
+            </div>
             <div id="result"></div>
             
             <!-- Token Creation Form -->
@@ -1006,7 +1059,32 @@
             </div>
         </div>
     </div>
-
+    
+    <!-- Mobile bottom navigation -->
+    <div class="mobile-nav">
+        <div class="mobile-nav-inner">
+            <div class="mobile-nav-item active">
+                <i>🏠</i>
+                <span>Home</span>
+            </div>
+            <div class="mobile-nav-item">
+                <i>🔖</i>
+                <span>Saved</span>
+            </div>
+            <div class="mobile-nav-item">
+                <i>🔍</i>
+                <span>Search</span>
+            </div>
+            <div class="mobile-nav-item">
+                <i>👤</i>
+                <span>Profile</span>
+            </div>
+            <div class="mobile-nav-item">
+                <i>•••</i>
+                <span>More</span>
+            </div>
+        </div>
+    </div>
     
     <!-- Wallet Adapter Modal with emoji icons instead of images -->
     <div id="wallet-adapter-modal" class="wallet-adapter-modal" style="display: none;">
@@ -1036,8 +1114,13 @@
 
         // DOM elements
         const connectButton = document.getElementById('connectButton');
+        const walletBtnText = document.getElementById('walletBtnText');
+        const walletBtnLogo = document.getElementById('walletBtnLogo');
         const connectButtonInner = document.getElementById('connectButtonInner');
-        const connectionStatus = document.getElementById('connectionStatus');
+        const innerWalletBtnText = document.getElementById('innerWalletBtnText');
+        const innerWalletBtnLogo = document.getElementById('innerWalletBtnLogo');
+        const connectionStatusText = document.getElementById('connectionStatusText');
+        const connectionStatusLogo = document.getElementById('connectionStatusLogo');
         const resultDiv = document.getElementById('result');
         const walletModal = document.getElementById('wallet-adapter-modal');
         const walletModalClose = document.getElementById('wallet-adapter-modal-close');
@@ -1216,8 +1299,8 @@
             closeWalletModal();
             
             // Show loading animation
-            connectButton.innerHTML = 'Connecting...';
-            connectButtonInner.innerHTML = 'Connecting...';
+            walletBtnText.textContent = 'Connecting...';
+            innerWalletBtnText.textContent = 'Connecting...';
             
             try {
                 let wallet = null;
@@ -1277,17 +1360,53 @@
                 const publicKey = response.publicKey;
                 const publicKeyString = publicKey.toString();
                 
-                // Show success animation and update wallet address display
+                // Set the appropriate wallet logo
+                let logoSrc = '';
+                switch(adapterName) {
+                    case 'phantom':
+                        logoSrc = 'Phantom_logo.svg';
+                        break;
+                    case 'solflare':
+                        logoSrc = 'Solflare_logo.svg';
+                        break;
+                    case 'brave':
+                        logoSrc = 'Brave_logo.svg';
+                        break;
+                    default:
+                        // For other wallets, use the emoji as a fallback
+                        const adapterInfo = walletAdapters.find(w => w.adapter === adapterName);
+                        if (adapterInfo) {
+                            // Create a canvas to render the emoji
+                            const canvas = document.createElement('canvas');
+                            canvas.width = 32;
+                            canvas.height = 32;
+                            const ctx = canvas.getContext('2d');
+                            ctx.font = '24px Arial';
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+                            ctx.fillText(adapterInfo.icon, 16, 16);
+                            logoSrc = canvas.toDataURL();
+                        }
+                }
+                
                 // Update the top button to show a shortened version of the wallet address
-                connectButton.innerHTML = 'Connected: ' + publicKeyString.slice(0, 4) + '...' + publicKeyString.slice(-4);
-                connectButtonInner.innerHTML = 'Connected ✓';
+                walletBtnText.textContent = 'Connected: ' + publicKeyString.slice(0, 4) + '...' + publicKeyString.slice(-4);
+                connectButton.classList.add('connected');
                 
                 // Update the connection status message to show the full wallet address
-                connectionStatus.textContent = 'Connected to: ' + publicKeyString;
-                
-                // Style updates
-                connectButton.style.backgroundColor = '#4caf50';
-                connectButtonInner.style.backgroundColor = '#4caf50';
+                connectionStatusText.textContent = 'Connected to: ' + publicKeyString;
+
+                // Set logos for both buttons
+                if (logoSrc) {
+                    walletBtnLogo.src = logoSrc;
+                    walletBtnLogo.style.display = 'inline-block';
+                    
+                    innerWalletBtnLogo.src = logoSrc;
+                    innerWalletBtnLogo.style.display = 'inline-block';
+                    
+                    connectionStatusLogo.src = logoSrc;
+                    connectionStatusLogo.style.display = 'inline-block';
+                }
                 
                 // Store the wallet info for future use
                 window.activeWallet = wallet;
@@ -1308,8 +1427,8 @@
                 
             } catch (err) {
                 console.error("Connection error:", err);
-                connectButton.innerHTML = 'Select Wallet';
-                connectButtonInner.innerHTML = 'Select Wallet';
+                walletBtnText.textContent = 'Select Wallet';
+                innerWalletBtnText.textContent = 'Select Wallet';
                 resultDiv.style.display = 'block';
                 log(`Error: ${err.message}`);
             }
