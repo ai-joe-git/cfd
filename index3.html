@@ -70,6 +70,10 @@
             font-family: 'Inter', sans-serif;
         }
         
+        html {
+            overflow-y: scroll; /* Always show scrollbar to prevent layout shift */
+        }
+        
         body {
             background-color: var(--dark-bg);
             background-image: radial-gradient(circle at 10% 20%, rgba(20, 30, 60, 0.5) 0%, rgba(10, 15, 30, 0.5) 90%);
@@ -189,6 +193,7 @@
             object-fit: contain;
             width: 20px;
             height: 20px;
+            flex-shrink: 0;
         }
         
         .main-content {
@@ -502,6 +507,7 @@
             align-items: center;
             justify-content: center;
             z-index: 1000;
+            overflow-y: auto; /* Allow scrolling in modal */
         }
         
         .wallet-adapter-modal-wrapper {
@@ -512,6 +518,7 @@
             width: 100%;
             border: 1px solid var(--border-color);
             position: relative;
+            margin: 40px auto;
         }
         
         .wallet-adapter-modal-title {
@@ -765,11 +772,17 @@
             
             .wallet-btn {
                 padding: 8px 12px;
-                font-size: 12px;
-                max-width: 120px;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
+                font-size: 11px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 4px;
+                max-width: none;
+            }
+            
+            .wallet-btn .wallet-logo {
+                width: 16px;
+                height: 16px;
             }
             
             .banner {
@@ -1202,13 +1215,11 @@
         function openWalletModal() {
             initWalletModal();
             walletModal.style.display = 'flex';
-            document.body.style.overflow = 'hidden';
         }
 
         // Close wallet modal
         function closeWalletModal() {
             walletModal.style.display = 'none';
-            document.body.style.overflow = 'auto';
         }
 
         // Get optimized connection with longer timeout
@@ -1328,11 +1339,11 @@
                 }
                 
                 // Update the top button to show a shortened version of the wallet address
-                walletBtnText.textContent = 'Connected: ' + publicKeyString.slice(0, 4) + '...' + publicKeyString.slice(-4);
+                walletBtnText.textContent = publicKeyString.slice(0, 4) + '...' + publicKeyString.slice(-4);
                 connectButton.classList.add('connected');
                 
                 // Update the inner button to match the top button style
-                innerWalletBtnText.textContent = 'Connected: ' + publicKeyString.slice(0, 4) + '...' + publicKeyString.slice(-4);
+                innerWalletBtnText.textContent = publicKeyString.slice(0, 4) + '...' + publicKeyString.slice(-4);
                 connectButtonInner.classList.add('connected');
                 
                 // Update the connection status message to show the full wallet address
