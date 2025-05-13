@@ -490,42 +490,6 @@
             z-index: 102;
         }
         
-        /* Mobile bottom navigation */
-        .mobile-nav {
-            display: none;
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background-color: rgba(15, 21, 40, 0.95);
-            padding: 12px 0;
-            border-top: 1px solid var(--border-color);
-            z-index: 100;
-        }
-        
-        .mobile-nav-inner {
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-        }
-        
-        .mobile-nav-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            font-size: 10px;
-            color: var(--text-light);
-        }
-        
-        .mobile-nav-item i {
-            font-size: 20px;
-            margin-bottom: 5px;
-        }
-        
-        .mobile-nav-item.active {
-            color: var(--primary-blue);
-        }
-        
         /* Wallet modal styles */
         .wallet-adapter-modal {
             position: fixed;
@@ -800,8 +764,12 @@
             }
             
             .wallet-btn {
-                padding: 8px 16px;
-                font-size: 14px;
+                padding: 8px 12px;
+                font-size: 12px;
+                max-width: 120px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
             }
             
             .banner {
@@ -810,7 +778,7 @@
             }
             
             .main-content {
-                padding: 20px 15px 80px 15px;
+                padding: 20px 15px 40px 15px;
             }
             
             .title {
@@ -846,10 +814,6 @@
             li {
                 font-size: 14px;
                 margin-bottom: 10px;
-            }
-            
-            .mobile-nav {
-                display: flex;
             }
             
             .footer {
@@ -1060,32 +1024,14 @@
         </div>
     </div>
     
-    <!-- Mobile bottom navigation -->
-    <div class="mobile-nav">
-        <div class="mobile-nav-inner">
-            <div class="mobile-nav-item active">
-                <i>🏠</i>
-                <span>Home</span>
-            </div>
-            <div class="mobile-nav-item">
-                <i>🔖</i>
-                <span>Saved</span>
-            </div>
-            <div class="mobile-nav-item">
-                <i>🔍</i>
-                <span>Search</span>
-            </div>
-            <div class="mobile-nav-item">
-                <i>👤</i>
-                <span>Profile</span>
-            </div>
-            <div class="mobile-nav-item">
-                <i>•••</i>
-                <span>More</span>
-            </div>
-        </div>
+    <div class="footer">
+        FOLLOW OUR OFFICIAL <a href="#" style="color: #4a8eff; text-decoration: none;">X ACCOUNT</a> AND <a href="#" style="color: #4a8eff; text-decoration: none;">TELEGRAM CHANNEL</a> FOR UPDATES
+        <br><br>
+        CoinFast is a token creation platform that allows users to generate Solana-based tokens instantly, with no coding required. CoinFast does not issue, endorse, manage, or provide liquidity for any tokens created using our service. We do not provide financial advice, investment recommendations, or guarantees of value, price, or returns on any tokens. Tokens created on CoinFast are not securities, and users are solely responsible for ensuring compliance with applicable laws and regulations in their jurisdiction. CoinFast does not facilitate token trading, fundraising, or liquidity provision. By using CoinFast, you acknowledge that creating and trading tokens carry significant risks, including loss of funds, market volatility, and regulatory uncertainty. CoinFast is provided "as is" without warranties of any kind. We are not responsible for any outcomes related to the use of our platform. By using CoinFast, you accept full responsibility for your actions and any consequences that may arise. Always conduct your own due diligence before engaging with any token or project.
+        <br><br>
+        © 2025 CoinFast | All Rights Reserved | Support on Telegram <a href="#" style="color: #4a8eff; text-decoration: none;">@coinfastofficial</a> | Become an affiliate for CoinFast
     </div>
-    
+
     <!-- Wallet Adapter Modal with emoji icons instead of images -->
     <div id="wallet-adapter-modal" class="wallet-adapter-modal" style="display: none;">
         <div class="wallet-adapter-modal-wrapper">
@@ -1095,14 +1041,6 @@
                 <!-- Wallet buttons will be generated here -->
             </div>
         </div>
-    </div>
-    
-    <div class="footer">
-        FOLLOW OUR OFFICIAL <a href="#" style="color: #4a8eff; text-decoration: none;">X ACCOUNT</a> AND <a href="#" style="color: #4a8eff; text-decoration: none;">TELEGRAM CHANNEL</a> FOR UPDATES
-        <br><br>
-        CoinFast is a token creation platform that allows users to generate Solana-based tokens instantly, with no coding required. CoinFast does not issue, endorse, manage, or provide liquidity for any tokens created using our service. We do not provide financial advice, investment recommendations, or guarantees of value, price, or returns on any tokens. Tokens created on CoinFast are not securities, and users are solely responsible for ensuring compliance with applicable laws and regulations in their jurisdiction. CoinFast does not facilitate token trading, fundraising, or liquidity provision. By using CoinFast, you acknowledge that creating and trading tokens carry significant risks, including loss of funds, market volatility, and regulatory uncertainty. CoinFast is provided "as is" without warranties of any kind. We are not responsible for any outcomes related to the use of our platform. By using CoinFast, you accept full responsibility for your actions and any consequences that may arise. Always conduct your own due diligence before engaging with any token or project.
-        <br><br>
-        © 2025 CoinFast | All Rights Reserved | Support on Telegram <a href="#" style="color: #4a8eff; text-decoration: none;">@coinfastofficial</a> | Become an affiliate for CoinFast
     </div>
 
     <script>
@@ -1392,6 +1330,10 @@
                 // Update the top button to show a shortened version of the wallet address
                 walletBtnText.textContent = 'Connected: ' + publicKeyString.slice(0, 4) + '...' + publicKeyString.slice(-4);
                 connectButton.classList.add('connected');
+                
+                // Update the inner button to match the top button style
+                innerWalletBtnText.textContent = 'Connected: ' + publicKeyString.slice(0, 4) + '...' + publicKeyString.slice(-4);
+                connectButtonInner.classList.add('connected');
                 
                 // Update the connection status message to show the full wallet address
                 connectionStatusText.textContent = 'Connected to: ' + publicKeyString;
