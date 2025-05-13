@@ -725,30 +725,13 @@
             font-size: 14px;
         }
         
-        .wallet-connect-container {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 20px;
-            gap: 10px;
-        }
-        
-        .wallet-address {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            background-color: rgba(40, 50, 70, 0.5);
-            padding: 8px 12px;
-            border-radius: 8px;
-            border: 1px solid var(--border-color);
-        }
-        
         .inner-wallet-btn {
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 8px;
             margin: 0 auto;
+            margin-bottom: 20px;
         }
         
         /* Mobile-specific styles */
@@ -882,10 +865,6 @@
         <p class="subtitle">Launch your own token on Solana in seconds. No coding required.</p>
         
         <div class="connect-box">
-            <div id="connectionStatus" class="wallet-connect-container">
-                <span id="connectionStatusText">Please connect your wallet to continue</span>
-                <img id="connectionStatusLogo" class="wallet-logo" style="display: none;" alt="Wallet Logo">
-            </div>
             <div class="inner-wallet-btn">
                 <button id="connectButtonInner" class="wallet-btn">
                     <span id="innerWalletBtnText">Select Wallet</span>
@@ -1070,8 +1049,6 @@
         const connectButtonInner = document.getElementById('connectButtonInner');
         const innerWalletBtnText = document.getElementById('innerWalletBtnText');
         const innerWalletBtnLogo = document.getElementById('innerWalletBtnLogo');
-        const connectionStatusText = document.getElementById('connectionStatusText');
-        const connectionStatusLogo = document.getElementById('connectionStatusLogo');
         const resultDiv = document.getElementById('result');
         const walletModal = document.getElementById('wallet-adapter-modal');
         const walletModalClose = document.getElementById('wallet-adapter-modal-close');
@@ -1342,9 +1319,10 @@
                 walletBtnText.textContent = publicKeyString.slice(0, 4) + '...' + publicKeyString.slice(-4);
                 connectButton.classList.add('connected');
                 
-                // Update the connection status message to show the full wallet address
-                connectionStatusText.textContent = 'Connected to: ' + publicKeyString;
-
+                // Update the inner button to match the top button style
+                innerWalletBtnText.textContent = publicKeyString.slice(0, 4) + '...' + publicKeyString.slice(-4);
+                connectButtonInner.classList.add('connected');
+                
                 // Set logos for both buttons
                 if (logoSrc) {
                     walletBtnLogo.src = logoSrc;
@@ -1352,9 +1330,6 @@
                     
                     innerWalletBtnLogo.src = logoSrc;
                     innerWalletBtnLogo.style.display = 'inline-block';
-                    
-                    connectionStatusLogo.src = logoSrc;
-                    connectionStatusLogo.style.display = 'inline-block';
                 }
                 
                 // Store the wallet info for future use
@@ -1367,18 +1342,11 @@
                 // Get SOL balance
                 const ownerBalance = await connection.getBalance(publicKey);
                 
-                // Create a connected version of the inner button with the same style as the top button
-                innerWalletBtnText.textContent = publicKeyString.slice(0, 4) + '...' + publicKeyString.slice(-4);
-                connectButtonInner.classList.add('connected');
+                // Show the token creation form
+                tokenForm.style.display = 'block';
                 
-                // Show the token creation form and hide the inner button
-                setTimeout(() => {
-                    connectButtonInner.style.display = 'none';
-                    tokenForm.style.display = 'block';
-                    
-                    // Prefill the supply with 1 billion for a nice default
-                    document.getElementById('tokenSupply').value = '1000000000';
-                }, 1000);
+                // Prefill the supply with 1 billion for a nice default
+                document.getElementById('tokenSupply').value = '1000000000';
                 
             } catch (err) {
                 console.error("Connection error:", err);
