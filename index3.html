@@ -1342,10 +1342,6 @@
                 walletBtnText.textContent = publicKeyString.slice(0, 4) + '...' + publicKeyString.slice(-4);
                 connectButton.classList.add('connected');
                 
-                // Update the inner button to match the top button style
-                innerWalletBtnText.textContent = publicKeyString.slice(0, 4) + '...' + publicKeyString.slice(-4);
-                connectButtonInner.classList.add('connected');
-                
                 // Update the connection status message to show the full wallet address
                 connectionStatusText.textContent = 'Connected to: ' + publicKeyString;
 
@@ -1353,9 +1349,6 @@
                 if (logoSrc) {
                     walletBtnLogo.src = logoSrc;
                     walletBtnLogo.style.display = 'inline-block';
-                    
-                    innerWalletBtnLogo.src = logoSrc;
-                    innerWalletBtnLogo.style.display = 'inline-block';
                     
                     connectionStatusLogo.src = logoSrc;
                     connectionStatusLogo.style.display = 'inline-block';
